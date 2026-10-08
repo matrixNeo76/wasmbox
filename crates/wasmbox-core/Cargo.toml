@@ -6,7 +6,7 @@ license.workspace = true
 description = "Esecutore WebAssembly isolato ad alte prestazioni con limiti di risorsa e una singola host function opaca `ask`."
 
 [dependencies]
-wasmtime = { version = "28.0", default-features = false, features = [
+wasmtime = { version = "49.0", default-features = false, features = [
     "std",
     "runtime",
     "cranelift",
