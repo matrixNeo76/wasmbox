@@ -1,0 +1,138 @@
+# wasmbox — ROADMAP & STATO DEL PROGETTO
+
+> **Documento di continuità**: chiunque riprenda il lavoro (nuovo progetto Freebuff,
+> nuovo agente, collaboratore) deve poter partire da qui. Spec tecnica completa:
+> [`blueprint.md`](blueprint.md). Integrazione sicurezza:
+> [`github-advanced-security.md`](github-advanced-security.md).
+> Ultimo aggiornamento: 2026-10-08.
+
+---
+
+## 1. STATO ATTUALE (verificato, non stimato)
+
+### 1.1 Prodotto — COMPLETO E VALIDATO ✅
+
+Workspace Rust (Wasmtime 28) che esegue codice Wasm non fidato con limiti di
+risorsa e una sola host function opaca `ask`.
+
+```
+crates/wasmbox-core/     # config, error, memory, engine + tests/e2e_test.rs
+examples/guest-echo/     # guest wasm32 (cdylib)
+docs/blueprint.md        # SPEC COMPLETA (vincolante)
+scripts/                 # install, build, preview, ghas-status, push_via_api
+.github/workflows/       # CodeQL (build-mode: none)
+.github/dependabot.yml   # cargo + github-actions weekly
+```
+
+Validazione (ultima esecuzione, tutti exit 0):
+
+| Check | Comando | Esito |
+|---|---|---|
+| Typecheck | `cargo check --workspace` | 0 |
+| Lint | `cargo clippy --workspace --all-targets -- -D warnings` | 0 |
+| Formattazione | `cargo fmt --all --check` | 0 |
+| Test | `cargo test -p wasmbox-core` | 0 — **20/20** (5 unit + 15 e2e) |
+| Guest wasm32 | `cargo build -p guest-echo --target wasm32-unknown-unknown --release` | 0 |
+| E2E guest reale | `GUEST_ECHO_WASM=... cargo test ... guest_echo_e2e` | ok (non skippato) |
+
+**Prima di toccare il codice**: rieseguire questi 5 comandi; sono la baseline.
+
+### 1.2 GitHub — CANONICO E VERIFICATO ✅
+
+- Repo: **`https://github.com/matrixNeo76/wasmbox`** (pubblico, branch `main`)
+- Contenuto: **23 file, byte-identici alla copia locale** (verifica sha1 blob)
+- La storia remota è **pulita** (3 commit iniziali via API, senza artefatti):
+  se il git locale divergesse, il remoto è la fonte di verità
+  (`git fetch && git reset --hard origin/main`)
+
+### 1.3 CI / Sicurezza — ATTIVO ✅
+
+| Componente | Stato | Note |
+|---|---|---|
+| CodeQL | ✅ run **success** | FIX applicato: Rust richiede `build-mode: none` (non `manual`) |
+| Dependabot version updates | ✅ funzionante | PR aperta: `wasmtime 28 → 49.0.2` — **decisione pending** (salto grande) |
+| Dependabot alerts | ✅ abilitati | 0 alert |
+| Secret scanning + push protection | ✅ abilitati | via API |
+| Actions | ✅ illimitate | repo pubblico |
+| CodeRabbit | ❌ non installato | serve installazione manuale dal marketplace (OAuth utente) |
+
+### 1.4 Preview Freebuff — CONFIGURATO
+
+- `set-install`: `sh ./scripts/install.sh`
+- `set-build`: `sh ./scripts/build.sh`
+- `set`: `sh ./scripts/preview.sh` porta **8080** (esegue la suite e serve il report)
+
+---
+
+## 2. PROSSIMI PASSI (in ordine di priorità)
+
+1. **Riconnessione GitHub / nuovo progetto**: il progetto Freebuff corrente ha il
+   nome del repo **bloccato su "wasm-executor"** nel form delle Settings
+   (bug: il nome è derivato dal nome del progetto). Soluzione: nuovo progetto
+   da `freebuff.com/cloud` → "Continue with GitHub" → scegli `matrixNeo76/wasmbox`
+   (oppure crea il progetto chiamandolo esattamente `wasmbox`).
+2. **Riprendere il lavoro**: nel nuovo progetto, leggere questo file +
+   `docs/blueprint.md`; la baseline dei test è al §1.1.
+3. **Revocare il PAT** usato per i push: GitHub → Settings → Developer settings →
+   Tokens (classic) → Revoke (è passato in chat).
+4. **Eliminare `matrixNeo76/wasm-executor`** (vuoto, creato dal pannello) — GitHub →
+   Danger Zone. (Deciso dall'utente.)
+5. **Decidere sulla PR Dependabot** `wasmtime 49` (il blueprint/la validazione sono
+   su 28.0 — aggiornare significa ri-validare tutta la suite con la nuova API).
+6. **CodeRabbit** (facoltativo): installare dal GitHub Marketplace sul repo `wasmbox`.
+7. **PENDING — `graphify` / `reactgraph`**: **nessuna traccia in questo workspace**
+   (grep totale = 0, nessuna dipendenza). Se esistono, erano un altro progetto/
+   sessione: documentarli qui (o importarli) appena l'utente fornisce dettagli.
+8. **Segnalazione bug Freebuff** (facoltativa): aprire issue su
+   `CodebuffAI/freebuff` sul nome repo bloccato (issue correlate note: #1403, #1423).
+
+---
+
+## 3. COSA È STATO FATTO IN QUESTA SESSIONE (cronologia sintetica)
+
+1. Blueprint salvato in `docs/blueprint.md` (richiesta esplicita: salvarlo come .md).
+2. Workspace costruito secondo il blueprint (7 fasi) + 3 adattamenti ai fatti reali:
+   - `total_stacks` assente senza feature `async` → rimosso dal pooling;
+   - `#[link(wasm_import_module = "env")]` necessario altrimenti `rust-lld`
+     fallisce con `undefined symbol: ask`;
+   - `guest_free`/`guest_run` → `pub unsafe extern "C"` + sezioni `# Safety`
+     (clippy `not_unsafe_ptr_arg_deref` / `missing_safety_doc`); firma wasm invariata.
+3. Suite test creata (15 e2e + 5 unit), tutto verde.
+4. Preview Freebuff configurato (report dei test servito su 8080).
+5. Integrazione GitHub Advanced Security (workflow CodeQL, dependabot, doc, script).
+6. Saga GitHub: init/commit/fix branch (`master`→`main`)/fix remote → il pannello
+   Freebuff falliva a ogni passo; risolto via **GitHub REST API**
+   (`scripts/push_via_api.py`, seed via Contents API per il repo vuoto, poi
+   blob/tree/commit/ref) → 23 file su `wasmbox`, repo reso pubblico.
+7. README creato e pushato; CodeQL fixato (`build-mode: none`) — run verde.
+8. Abilitati secret scanning, push protection, dependabot alerts (API).
+9. Ricerca Freebuff: nessun annuncio pubblico di deprecazione; issue note #1403/#1423.
+
+---
+
+## 4. TRAPPOLE CONOSCIUTE (non perdere tempo a riscoprirle)
+
+| # | Trappola | Fatto |
+|---|---|---|
+| 1 | Gate piattaforma: `git push/ls-remote/gh` verso GitHub → **bloccati** ("not connected") | usare `scripts/push_via_api.py` (REST API, non bloccata) |
+| 2 | `.env`/Keys **non propagano** i valori ai processi del terminale (`GITHUB_TOKEN` = lunghezza 0 sempre) | passare il token via stdin in chat, non da `.env` |
+| 3 | Pannello Settings: nome repo bloccato sul nome progetto (`wasm-executor`) | nuovo progetto (vedi §2.1) |
+| 4 | Pannello "save version" → errore `repo_not_connected` finché non si ricollega | riconnessione da Settings, oppure lavorare sul nuovo progetto |
+| 5 | CodeQL + Rust: `manual` build mode **non supportato** | `build-mode: none` (gia nel workflow) |
+| 6 | Git database API su repo **vuoto** → `409 Git Repository is empty` | seed del primo file via Contents API (già nello script) |
+| 7 | `wasmbox` privato visibile solo col token; anonimo → 404 (non è inesistente) | ora è pubblico, anonimo → 200 |
+
+---
+
+## 5. CONTESTO PER IL PROSSIMO AGENTE
+
+- **Spec**: `docs/blueprint.md` è la fonte autoritativa del "cosa deve fare".
+  Questo file è il "dove siamo".
+- **Comandi rapidi**: `sh ./scripts/install.sh` (toolchain), `sh ./scripts/build.sh`
+  (check + guest wasm), `sh ./scripts/preview.sh` (test + report).
+- **Test opzionale guest reale**:
+  `GUEST_ECHO_WASM=target/wasm32-unknown-unknown/release/guest_echo.wasm cargo test -p wasmbox-core`
+- **Nessun servizio esterno richiesto** dal prodotto (niente DB, auth, email).
+- **Lingua dell'utente**: italiano. Preferisce risposte concrete con prove
+  (HTTP code, exit code) e si è arrabbiato per istruzioni a "pannelli" che
+  non funzionavano → **verificare prima, consigliare poi**.
