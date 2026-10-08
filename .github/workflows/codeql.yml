@@ -27,10 +27,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: rust
-          build-mode: manual
-
-      - name: Build del workspace
-        run: cargo build --workspace
+          build-mode: none
 
       - name: Esegui le query CodeQL
         uses: github/codeql-action/analyze@v3
