@@ -80,9 +80,10 @@ Validazione (ultima esecuzione, tutti exit 0):
 5. **Decidere sulla PR Dependabot** `wasmtime 49` (il blueprint/la validazione sono
    su 28.0 — aggiornare significa ri-validare tutta la suite con la nuova API).
 6. **CodeRabbit** (facoltativo): installare dal GitHub Marketplace sul repo `wasmbox`.
-7. **PENDING — `graphify` / `reactgraph`**: **nessuna traccia in questo workspace**
-   (grep totale = 0, nessuna dipendenza). Se esistono, erano un altro progetto/
-   sessione: documentarli qui (o importarli) appena l'utente fornisce dettagli.
+7. **`graphify` / `reactgraph` — DECISO: differiti** (decisione utente 2026-10-08):
+   l'utente li usa di norma per leggere codice/UI, ma il repo è piccolo e
+   autoesplicativo → **non introdurli** finché non serve; rivalutare se il
+   repo cresce. (Nessuna traccia nel workspace: grep=0, zero dipendenze.)
 8. **Segnalazione bug Freebuff** (facoltativa): aprire issue su
    `CodebuffAI/freebuff` sul nome repo bloccato (issue correlate note: #1403, #1423).
 
