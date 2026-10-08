@@ -1,0 +1,21 @@
+[package]
+name = "wasmbox-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Esecutore WebAssembly isolato ad alte prestazioni con limiti di risorsa e una singola host function opaca `ask`."
+
+[dependencies]
+wasmtime = { version = "28.0", default-features = false, features = [
+    "std",
+    "runtime",
+    "cranelift",
+    "pooling-allocator",
+    "cache",
+    "parallel-compilation",
+] }
+thiserror = "2.0"
+anyhow = "1.0"
+
+[dev-dependencies]
+wat = "1"

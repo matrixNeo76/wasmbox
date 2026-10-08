@@ -1,0 +1,12 @@
+# Build artifacts
+/target/
+
+# Freebuff runtime state
+/.vly-run/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
