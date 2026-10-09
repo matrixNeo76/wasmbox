@@ -20,8 +20,9 @@ crates/wasmbox-core/     # config, error, memory, engine + tests/e2e_test.rs
 examples/guest-echo/     # guest wasm32 (cdylib)
 docs/blueprint.md        # SPEC COMPLETA (vincolante)
 scripts/                 # install, build, preview, ghas-status, push_via_api
-.github/workflows/       # CodeQL (build-mode: none)
+.github/workflows/       # CI (baseline: check/test/clippy/fmt/guest) + CodeQL
 .github/dependabot.yml   # cargo + github-actions weekly
+LICENSE-MIT, LICENSE-APACHE
 ```
 
 Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
@@ -51,10 +52,12 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
 | Componente | Stato | Note |
 |---|---|---|
 | CodeQL | ✅ run **success** | FIX applicato: Rust richiede `build-mode: none` (non `manual`) |
+| CI baseline | ✅ **aggiunta 2026-10-09** | `.github/workflows/ci.yml`: check, **test (con `GUEST_ECHO_WASM` reale)**, clippy `-D warnings`, fmt, guest wasm32, su push/PR. Prima **nessuna CI compilava/testava** (CodeQL è solo analisi statica) |
 | Dependabot version updates | ✅ funzionante | **0 PR aperte** (2026-10-09): #2 `wasmtime 28 → 49.0.2` **chiusa** (supersita dalla migrazione locale spinta in `c2963d7`); #1 `actions/checkout 4 → 7` **mergiata** (commit `0795a37`) |
 | Dependabot alerts | ✅ abilitati | 0 alert |
 | Secret scanning + push protection | ✅ abilitati | via API |
 | Actions | ✅ illimitate | repo pubblico |
+| Licenze | ✅ **aggiunte 2026-10-09** | `LICENSE-MIT` + `LICENSE-APACHE` (prima mancavano, benché `Cargo.toml` dichiari `MIT OR Apache-2.0`) |
 | CodeRabbit | ✅ **integrato** | App già installata dall'utente su tutti i suoi repo pubblici; badge nel README (verificato 2026-10-09) |
 
 ### 1.4 Preview Freebuff — CONFIGURATO
@@ -136,6 +139,11 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
     `git pull --rebase` + **push `c2963d7`**, CodeQL `success` su merge e push;
     Roadmap allineata allo stato reale; badge CodeRabbit aggiunto al README
     (l'App risulta già installata sui repo dell'utente).
+12. Sessione 2026-10-09 (seguito): analisi dei gap reali → aggiunti
+    `.github/workflows/ci.yml` (la vecchia CodeQL in `build-mode: none` NON
+    compilava né testava: la baseline girava solo in locale) e i file
+    `LICENSE-MIT` / `LICENSE-APACHE` (mancanti nonostante la doppia licenza
+    dichiarata). Entrambi i punti approvati dall'utente come prioritari.
 
 ---
 

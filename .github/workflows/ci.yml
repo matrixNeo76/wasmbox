@@ -1,0 +1,46 @@
+# CI — baseline completa del workspace Rust.
+# CodeQL (codeql.yml) usa build-mode: none e NON compila/testa: questa
+# workflow è l'unico gate automatico su push e PR (es. PR di Dependabot).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Baseline (check, test, clippy, fmt, guest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Toolchain (wasm32 + clippy + rustfmt)
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup component add clippy rustfmt
+
+      # Il guest va buildato PRIMA dei test: GUEST_ECHO_WASM abilita
+      # l'e2e reale (guest_echo_e2e), che altrimenti salta silenziosamente.
+      - name: Build guest wasm32
+        run: cargo build -p guest-echo --target wasm32-unknown-unknown --release
+
+      - name: cargo check
+        run: cargo check --workspace
+
+      - name: cargo test (e2e reale incluso)
+        env:
+          GUEST_ECHO_WASM: target/wasm32-unknown-unknown/release/guest_echo.wasm
+        run: cargo test -p wasmbox-core
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
