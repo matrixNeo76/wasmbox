@@ -1,3 +1,12 @@
+---
+type: Specification
+title: "BLUEPRINT wasmbox — specifica di riferimento v0.4"
+description: "Spec autorevole e vincolante del prodotto: obiettivo, struttura workspace, dipendenze, ABI, file per file, divieti, ordine di implementazione, test, validazione."
+resource: "docs/blueprint.md"
+tags: ["spec", "blueprint", "abi", "wasmtime", "sandbox"]
+updated: "2026-10-09"
+---
+
 # BLUEPRINT — `wasmbox` (specifica di riferimento v0.4)
 
 > Questo documento è la specifica autorevole del progetto. Va salvato prima di scrivere codice

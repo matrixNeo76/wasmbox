@@ -79,10 +79,37 @@ Errori tipizzati: `FuelExhausted`, `Timeout`, `GuestOutOfMemory`,
 
 ## Documentazione
 
-- **[docs/blueprint.md](docs/blueprint.md)** — specifica completa
-  (architettura, ABI, limite per limite, ordine di implementazione)
+La documentazione in `docs/` segue il formato **[OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format)** (Open Knowledge Format: Markdown + frontmatter YAML, `index.md` + `log.md`):
+
+- **[docs/index.md](docs/index.md)** — indice del bundle (OKF v0.2)
+- **[docs/blueprint.md](docs/blueprint.md)** — specifica vincolante
+  (architettura, ABI, limite per limite, divieti, ordine di implementazione)
+- **[docs/ROADMAP.md](docs/ROADMAP.md)** — dove siamo: stato verificato,
+  prossimi passi, cronologia con prove, trappole note
 - **[docs/github-advanced-security.md](docs/github-advanced-security.md)**
   — integrazione CodeQL / secret scanning / Dependabot
+
+## Cosa wasmbox NON è (audit 2026-10-09)
+
+É una **libreria Rust**: per usarla si scrive codice Rust (`SandboxEngine::new`
++ `engine.run(input, &mut handler)` — vedi `examples/host-run`).
+
+**Non include** (estensioni possibili, nessuna avviata — decisione aperta,
+vedi `docs/ROADMAP.md` §2.9):
+
+- **CLI** (`wasmbox run guest.wasm "input"`);
+- **endpoint HTTP/gRPC** per l'uso da agenti AI esterni senza codice Rust;
+- FFI/C-ABI per altri linguaggi.
+
+La scelta è deliberata: il blueprint vieta logica di dominio nel crate `core`,
+e un protocollo di interfaccia È logica di dominio — se servirà, andrà in un
+crate/applicazione separato sopra `wasmbox-core`.
+
+## Pubblicazione su crates.io
+
+`wasmbox-core` è pronto (`cargo publish --dry-run` = 0, 12 file). Nota: il nome
+`wasmbox` puro è già occupato su crates.io (2022) — il pacchetto si chiama
+`wasmbox-core`.
 
 ## Licenza
 

@@ -1,3 +1,12 @@
+---
+type: Reference
+title: "GitHub Advanced Security — integrazione wasmbox"
+description: "Stato di CodeQL, secret scanning e Dependabot sul repo: cosa è attivo, come verificarlo, costi/licenze."
+resource: "docs/github-advanced-security.md"
+tags: ["security", "ghas", "codeql", "dependabot", "secret-scanning"]
+updated: "2026-10-09"
+---
+
 # GitHub Advanced Security — integrazione `wasmbox`
 
 Questa integrazione abilita le funzionalità di sicurezza di GitHub sul

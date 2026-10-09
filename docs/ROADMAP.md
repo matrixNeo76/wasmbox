@@ -1,10 +1,20 @@
+---
+type: Specification
+title: "wasmbox — ROADMAP & stato del progetto"
+description: "Documento di continuità: dove siamo, cosa è fatto, cosa è pending, cronologia e trappole note."
+resource: "docs/ROADMAP.md"
+tags: ["roadmap", "status", "continuity", "wasmbox"]
+updated: "2026-10-09"
+---
+
 # wasmbox — ROADMAP & STATO DEL PROGETTO
 
 > **Documento di continuità**: chiunque riprenda il lavoro (nuovo progetto Freebuff,
 > nuovo agente, collaboratore) deve poter partire da qui. Spec tecnica completa:
 > [`blueprint.md`](blueprint.md). Integrazione sicurezza:
 > [`github-advanced-security.md`](github-advanced-security.md).
-> Ultimo aggiornamento: 2026-10-09.
+> Documentazione in formato **OKF v0.2** (Open Knowledge Format): vedi
+> [`index.md`](index.md). Ultimo aggiornamento: 2026-10-09.
 
 ---
 
@@ -104,6 +114,39 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
    rieseguito 2026-10-08 → sempre 0.)
 8. **Segnalazione bug Freebuff** (facoltativa): aprire issue su
    `CodebuffAI/freebuff` sul nome repo bloccato (issue correlate note: #1403, #1423).
+9. **Audit di completamento (2026-10-09)** — verdetto onesto richiesto dall'utente
+   ("è davvero concluso?"). Risultati verificati:
+   - **Cosa è concluso**: il runtime come **libreria** è completo e validato
+     (27/27 test, CI+CodeQL verdi, bench reali, docs allineate, GHAS attivo,
+     LICENSE-MIT/APACHE presenti).
+   - **Gap 1 — interfaccia per agenti AI**: wasmbox-core è una **libreria
+     Rust pura**: chi la usa deve scrivere codice Rust. **Non esiste** una CLI
+     (`wasmbox run guest.wasm …`) né un endpoint HTTP/gRPC/server che permetta
+     a un agente AI esterno di inviare guest+payload e ricevere output. Il
+     progetto `examples/host-run` è solo un esempio, non un prodotto.
+     **Estensioni possibili (Nessuna avviata, richiedono decisione utente)**:
+     (a) CLI minimale su `wasmbox-core` (solo input→output di `run()`, senza
+     protocollo — la logica di dominio resterebbe fuori dal crate, rispettando
+     i divieti del blueprint);
+     (b) servizio HTTP che wrappa `SandboxEngine::run` — introduce però una
+     superficie di attacco di rete + un protocollo di dominio, cose che
+     il blueprint vieta esplicitamente dentro il crate (possono stare solo
+     in un crate/applicazione separato);
+     (c) FFI/C-ABI (`wasmbox-ffi`) per essere incapsulato da altri linguaggi.
+   - **Gap 2 — pubblicazione crates.io**: dry-run OK, ma **publish reale non
+     eseguibile da qui** (serve token crates.io dell'utente + conferma; inoltre
+     sarebbe il **primo** push pubblici di artefatto, non un commit GitHub).
+     Verificato via API: `wasmbox-core` **non è registrato su crates.io**
+     (404 = disponibile); `wasmbox` puro **è occupato** (crate 2022,
+     drifting-in-space/wasmbox, 2 versioni, 2732 download totali).
+   - **Gap 3 — docs in OKF v0.2**: prima dell'audit `docs/` NON aveva
+     frontmatter → CHIUSO in questa sessione: tutti e 3 i concept hanno
+     frontmatter YAML (campo `type` obbligatorio presente) + creati
+     `docs/index.md` (Collection, `okf_version: "0.2"`) e `docs/log.md`
+     (Log, `okf_version: "0.2"`). Verifica di conformance: type presente su
+     tutti, unico campo obbligatorio della spec.
+   - **Gap 4 — AGENTS.md stantio** (wasmtime 28, 20/20, pendenti già risolti
+     mostrati come aperti): riscritto in questa sessione, verifica visiva ok.
 
 ---
 
@@ -157,6 +200,21 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
     - **F**: metadati crates.io + `cargo publish --dry-run` → **exit 0**
       (12 file, 86.1 KiB);
     - blueprint → **v0.4**.
+14. **Sessione 2026-10-09 (audit di completamento)** — l'utente ha chiesto di
+    valutare onestamente se è davvero tutto concluso, incluso l'uso da parte
+    di agenti AI e il formato docs OKF v0.2. Fatti verificati:
+    (a) la PR Dependabot wasmtime era già risolta dalla migrazione in `c2963d7`
+    (PR #2 chiusa; workspace già a 49.0);
+    (b) crates.io via API: `wasmbox-core` **libero** (404), `wasmbox` puro
+    **occupato** (2022) → la pubblicazione reale resta azione utente (token
+    crates.io); (c) **gap reale individuato**: wasmbox-core è una libreria
+    pura —**nessuna CLI né endpoint** per agenti AI esterni (opzioni (a) CLI
+    minimale, (b) servizio HTTP separato, (c) FFI — vedi §2.9, nessuna avviata
+    senza decisione utente); (d) **docs convertite a OKF v0.2** (frontmatter
+    `type`+`title`+`description`+`tags` su tutti i concept, nuovi `index.md`
+    e `log.md`, spec: GoogleCloudPlatform/open-knowledge-format);
+    (e) **AGENTS.md riscritto** (era stantio: wasmtime 28, 20/20, pendenti
+    risolti mostrati come aperti, trap git descritto come blocco).
 
 ---
 
