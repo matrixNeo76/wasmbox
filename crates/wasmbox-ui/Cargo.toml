@@ -1,0 +1,22 @@
+[package]
+name = "wasmbox-ui"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "UI minimale Slint per testare wasmbox-core: software renderer, screenshot BMP headless."
+
+# slint senza `std` (disattiva `systemfonts` nel software renderer): niente
+# fontconfig/fontdb di sistema; per il testo serve un font embedded (non usato
+# qui: la demo è senza testo del guest — gli stati sono visuali/pixel).
+# Il nostro binario resta std.
+[dependencies]
+slint = { version = "=1.18.1", default-features = false, features = [
+    "compat-1-18",
+    "renderer-software",
+    "unsafe-single-threaded",
+    "libm",
+] }
+wasmbox-core = { path = "../../crates/wasmbox-core" }
+
+[build-dependencies]
+slint-build = { version = "=1.18.1", default-features = false, features = ["compat-1-18", "renderer-software"] }

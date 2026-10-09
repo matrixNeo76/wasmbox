@@ -1,0 +1,48 @@
+// UI minimale per testare wasmbox-core in HEADLESS con lo screenshot BMP.
+// Volontariamente NIENTE testo nè Button/Text (senza systemfonts, qualsiasi
+// elemento testuale farebbe panic nel software renderer per font fallback):
+// lo stato è espresso dal colore del quadrato, clickabile per rilanciare la run.
+//
+// - grigio: nessuna run o esito pari
+// - verde: l'ultima run guest è andata a buon fine
+// - rosso: l'ultima run guest è fallita
+
+// Font embedded: senza systemfonts (no fontconfig), il software renderer
+// richiede comunque un default font per la Window: lo includo qui.
+import "fonts/NotoSans-Regular.ttf";
+
+export component SandboxWindow inherits Window {
+    default-font-family: "Noto Sans";
+    in property <bool> last-ok;              // esito dell'ultima run
+    in property <bool> has-run;              // è stata eseguita almeno una run
+    callback rerun-ok();                     // click sul quadrato: rilancia con input ok
+    callback rerun-fail();                   // click sulla banda rossa: rilancia con guest mancante
+
+    title: "wasmbox UI";
+    background: white;
+
+    Rectangle {
+        width: 200px;
+        height: 200px;
+        y: 20px;
+        x: (parent.width - self.width) / 2;
+        border-radius: 12px;
+        background: !root.has-run ? #9e9e9e : (root.last-ok ? #4caf50 : #f44336);
+
+        TouchArea {
+            clicked => { root.rerun-ok(); }
+        }
+    }
+
+    // Banda rossa inferiore: il modo per innescare una run FALLITA dalla UI.
+    Rectangle {
+        width: parent.width;
+        height: 24px;
+        y: parent.height - 24px;
+        background: #b71c1c;
+
+        TouchArea {
+            clicked => { root.rerun-fail(); }
+        }
+    }
+}

@@ -16,7 +16,7 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 
 | File | `type` | Contenuto |
 |---|---|---|
-| [blueprint.md](blueprint.md) | Specification | Spec vincolante: obiettivo, ABI, limiti, divieti, ordine di implementazione, test, validazione (v0.4) |
+| [blueprint.md](blueprint.md) | Specification | Spec vincolante: obiettivo, ABI, limiti, divieti, interfacce di fruizione (v0.5), test, validazione |
 | [ROADMAP.md](ROADMAP.md) | Specification | Dove siamo, prossimi passi, cronologia completa, trappole note, contesto per il prossimo agente |
 | [github-advanced-security.md](github-advanced-security.md) | Reference | Stato CodeQL / secret scanning / Dependabot, procedure di verifica e abilitazione |
 
@@ -25,10 +25,13 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | File | Ruolo |
 |---|---|
 | [`../AGENTS.md`](../AGENTS.md) | Istruzioni operative per agenti (lettura obbligatoria al primo avvio) |
-| [`../README.md`](../README.md) | Presentazione progetto + quickstart |
+| [`../README.md`](../README.md) | Presentazione progetto + quickstart (CLI/UI incluse) |
+| [`../skills/wasmbox/SKILL.md`](../skills/wasmbox/SKILL.md) | Skill per agenti AI: come usare `wasmbox-cli` (exit code, `--json`) |
+| [`../crates/wasmbox-cli/`](../crates/wasmbox-cli/) | CLI per umani e agenti AI (run + `--json`) |
+| [`../crates/wasmbox-ui/`](../crates/wasmbox-ui/) | UI minimale Slint con screenshot BMP headless |
 | [`../.github/workflows/ci.yml`](../.github/workflows/ci.yml) | CI baseline (check/test/clippy/fmt/guest) |
 | [`../.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) | CodeQL build-mode none |
-| [`../scripts/`](../scripts/) | install / build / preview / ghas-status |
+| [`../scripts/`](../scripts/) | install / build / preview (con demo CLI+UI) / ghas-status |
 
 ## Ordine di lettura consigliato (per un nuovo agente)
 

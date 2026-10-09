@@ -1,13 +1,13 @@
 ---
 type: Specification
-title: "BLUEPRINT wasmbox — specifica di riferimento v0.4"
+title: "BLUEPRINT wasmbox — specifica di riferimento v0.5"
 description: "Spec autorevole e vincolante del prodotto: obiettivo, struttura workspace, dipendenze, ABI, file per file, divieti, ordine di implementazione, test, validazione."
 resource: "docs/blueprint.md"
 tags: ["spec", "blueprint", "abi", "wasmtime", "sandbox"]
 updated: "2026-10-09"
 ---
 
-# BLUEPRINT — `wasmbox` (specifica di riferimento v0.4)
+# BLUEPRINT — `wasmbox` (specifica di riferimento v0.5)
 
 > Questo documento è la specifica autorevole del progetto. Va salvato prima di scrivere codice
 > (richiesta esplicita dell'utente) e consultato durante tutta l'implementazione.
@@ -20,6 +20,17 @@ updated: "2026-10-09"
 > (`harness = false`, solo std: nessuna dipendenza aggiunta), **7 test di robustezza**
 > (boundary payload, memoria, concorrenza → 27 totali) e **metadati crates.io**
 > (`repository`/`homepage`/`readme`/`keywords`/`categories`, `cargo publish --dry-run` OK).
+>
+> v0.5 (2026-10-09): **interfacce di fruizione** — la libreria kora era inutilizzabile
+> senza scrivere Rust. Aggiunti: **`crates/wasmbox-cli`** (CLI per umani e agenti AI:
+> input da argv/stdin, `--json` machine-readable, exit code deterministici),
+> **`crates/wasmbox-ui`** (UI minimale Slint con screenshot BMP headless via
+> `SoftwareRenderer` su `MinimalSoftwareWindow`, senza fontconfig di sistema:
+> font embedded), **`skills/wasmbox/SKILL.md`** (come un agente usa la CLI:
+> invocazione, tabella exit code, politica di default). Regola: la logica di dominio
+> resta FUORI da wasmbox-core — CLI e UI sono applicazioni separate che usano
+> solo l'API pubblica (`SandboxEngine`, `HostHandler`, `SandboxConfig`,
+> `SandboxError`); nessun cambio all'ABI né ai divieti.`
 
 # OBIETTIVO
 
@@ -52,6 +63,18 @@ wasmbox/
 └── examples/host-run/            # v0.4: esempio lato host
     ├── Cargo.toml                # bin, dipende da wasmbox-core (path)
     └── src/main.rs
+```
+
+Interfacce (v0.5):
+```
+├── crates/wasmbox-cli/           # v0.5: CLI per umani + agenti AI
+│   └── src/main.rs               # run <guest.wasm> [input] [--json]; exit 0/2..10
+├── crates/wasmbox-ui/            # v0.5: UI minimale Slint headless
+│   ├── Cargo.toml                # slint default-features = false (no fontconfig)
+│   ├── build.rs                  # compile + embed_resources (font)
+│   ├── sandbox.slint             # componente sandboxwindow, senza testo
+│   └── src/main.rs               # --screenshot out.bmp → BMP 24-bit puro Rust
+└── skills/wasmbox/SKILL.md       # v0.5: skill agente per usare la CLI
 ```
 
 # DIPENDENZE
@@ -232,6 +255,41 @@ Test richiesti (tutti devono passare):
 22. `test_concurrent_engines_share_cache_dir`: 4 thread × engine propri sullo stesso `cache_dir`
     (race sui tmp della cache + isolamento ticker).
 
+# INTERFACCE DI FRUIZIONE (v0.5)
+
+## crates/wasmbox-cli (CLI)
+
+- Comando unico: `wasmbox-cli run <guest.wasm> [input] [--json]`;
+- input: da argv, altrimenti da stdin pipe (agenti/script);
+- `--json`: una riga su stdout `{"ok":true,"output":"…"}` oppure
+  `{"ok":false,"error":"<snake_case kind>","message":"..."}` — mai altro su stdout;
+- senza `--json`: output del guest su stdout, log su stderr;
+- exit code deterministici: 0 ok · 2 uso/IO · 3 fuel · 4 timeout · 5 memoria
+  guest · 6 ask limit/payload · 7 errore handler · 8 missing export · 9 wasm
+  invalido · 10 esecuzione/engine;
+- handler della CLI: **eco** (solo demo) — nessun protocollo extra, nessuna
+  logica di dominio (i divieti della spec restano validi);
+- tuning sandbox NON esposto (surface minima deliberatamente).
+
+## crates/wasmbox-ui (UI minimale)
+
+- Slint **senza systemfonts** (`default-features = false` con `compat-1-18`,
+  `renderer-software`, `unsafe-single-threaded`, `libm`) — nessun fontconfig;
+- screenshot: `wasmbox-ui --screenshot out.bmp [guest.wasm] [input]` —
+  `MinimalSoftwareWindow` + `SoftwareRenderer.render(buffer, stride)` su pixel
+  RGB; BMP 24-bit non compresso scritto a mano (54 header + righe bottom-up);
+- esito visual: verde = run guest ok, rossa = fallita, grigia = mai eseguita;
+- exit: 0 ok · 2 uso · 11 render vuoto · 12 sandbox fallita;
+- richiede dimensione della finestra (`set_size`) dopo `show()`, altrimenti il
+  render è vuoto (trappola nota).
+
+## skills/wasmbox/SKILL.md (contract per agenti AI)
+
+- invocazione, prerequisiti, tabella exit code, politica di default
+  (`--json` sempre; non ritentare su fuel/timeout/OOM; guest = non fidato);
+- limiti espliciti dichiarati (la CLI fa solo eco; dominio reale → crate host
+  proprio con `HostHandler` + `wasmbox-core`).
+
 # VALIDAZIONE FINALE (tutte obbligatorie)
 
 - `cargo check --workspace`
@@ -240,6 +298,8 @@ Test richiesti (tutti devono passare):
 - `cargo clippy --workspace --all-targets -- -D warnings`
 - `cargo fmt --check`
 - Grep su `crates/wasmbox-core/src`: zero termini di dominio (backup, scan, robocopy, restore, sync); zero riferimenti a `wasmtime-wasi`, `serde_json`, `std::process`.
+- v0.5: `wasmbox-cli --json` una run reale con output atteso `echo_result:…`;
+  `wasmbox-ui --screenshot` produce BMP valido (magic `BM`, colori attesi)
 
 # AMBIENTE
 

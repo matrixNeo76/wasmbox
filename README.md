@@ -32,6 +32,9 @@ né la richiesta né la risposta di `ask` — sono bytes opachi.
 ├── crates/wasmbox-core/     # il motore: config, error, memory, engine
 │   ├── tests/e2e_test.rs    # suite test (27: 5 unit + 22 e2e)
 │   └── benches/perf.rs      # benchmark solo-std (cargo bench)
+├── crates/wasmbox-cli/      # CLI per umani e agenti AI (--json, exit code)
+├── crates/wasmbox-ui/       # UI minimale Slint (screenshot BMP headless)
+├── skills/wasmbox/SKILL.md  # skill per agenti AI: come usare la CLI
 ├── examples/guest-echo/     # guest Wasm di esempio (wasm32-unknown-unknown)
 ├── examples/host-run/       # esempio lato host: carica un guest, passa un handler
 ├── docs/blueprint.md        # specifica completa di progetto
@@ -58,6 +61,36 @@ cargo run -p host-run -- target/wasm32-unknown-unknown/release/guest_echo.wasm "
 
 # benchmark (compile freddo/cache, overhead di ask)
 cargo bench -p wasmbox-core
+```
+
+### CLI (per umani e agenti AI)
+
+```sh
+cargo build -p wasmbox-cli
+
+# output umano (stdout = output del guest)
+target/debug/wasmbox-cli run target/wasm32-unknown-unknown/release/guest_echo.wasm "ciao"
+# → echo_result:INSPECT:CIAO
+
+# pipe/stdin per agenti e script
+echo -n "input da pipe" | target/debug/wasmbox-cli run <guest.wasm>
+
+# output JSON machine-readable (UNA riga su stdout) + exit code deterministici
+target/debug/wasmbox-cli run <guest.wasm> "ciao" --json
+# → {"ok":true,"output":"echo_result:INSPECT:CIAO"}
+```
+
+Exit code: 0 ok · 2 uso/IO · 3 fuel · 4 timeout · 5 memoria guest · 6 ask
+limit/payload · 7 errore handler · 8 export mancante · 9 wasm invalido ·
+10 esecuzione. Contratto completo per agenti: [`skills/wasmbox/SKILL.md`](skills/wasmbox/SKILL.md).
+
+### UI minimale (Slint, headless)
+
+```sh
+cargo build -p wasmbox-ui
+# screenshot BPM 320×240: verde = run guest ok, rossa = fallita
+target/debug/wasmbox-ui --screenshot screenshot.bmp \
+  target/wasm32-unknown-unknown/release/guest_echo.wasm "ciao"
 ```
 
 ## Contratto ABI (guest)
@@ -89,21 +122,29 @@ La documentazione in `docs/` segue il formato **[OKF v0.2](https://github.com/Go
 - **[docs/github-advanced-security.md](docs/github-advanced-security.md)**
   — integrazione CodeQL / secret scanning / Dependabot
 
-## Cosa wasmbox NON è (audit 2026-10-09)
+## Cosa wasmbox NON è (audit 2026-10-09, aggiornato)
 
-É una **libreria Rust**: per usarla si scrive codice Rust (`SandboxEngine::new`
-+ `engine.run(input, &mut handler)` — vedi `examples/host-run`).
+Il **crate `wasmbox-core` è e resta una libreria Rust** — niente logica di
+dominio, niente protocolli, niente I/O: si usa via `SandboxEngine::new` +
+`engine.run(input, &mut handler)` (vedi `examples/host-run`).
 
-**Non include** (estensioni possibili, nessuna avviata — decisione aperta,
+Le **interfacce di fruizione** vivono in crate applicativi separati, tutti
+già presenti nel workspace (introdotte il 2026-10-09):
+
+- **`crates/wasmbox-cli`** — CLI per umani e agenti AI (run + `--json`,
+  exit deterministici, handler eco);
+- **`crates/wasmbox-ui`** — UI minimale Slint con screenshot BMP headless;
+- **`skills/wasmbox/SKILL.md`** — contratto per agenti AI.
+
+**Resta fuori** (estensioni possibili, nessuna avviata — decisione aperta,
 vedi `docs/ROADMAP.md` §2.9):
 
-- **CLI** (`wasmbox run guest.wasm "input"`);
-- **endpoint HTTP/gRPC** per l'uso da agenti AI esterni senza codice Rust;
+- **endpoint HTTP/gRPC** per l'uso da agenti AI esterni senza processo CLI;
 - FFI/C-ABI per altri linguaggi.
 
 La scelta è deliberata: il blueprint vieta logica di dominio nel crate `core`,
-e un protocollo di interfaccia È logica di dominio — se servirà, andrà in un
-crate/applicazione separato sopra `wasmbox-core`.
+e un protocollo di interfaccia È logica di dominio — sta in un crate separato
+sopra `wasmbox-core` (CLI e UI seguono già questa regola).
 
 ## Pubblicazione su crates.io
 

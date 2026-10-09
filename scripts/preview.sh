@@ -27,6 +27,25 @@ if command -v cargo >/dev/null 2>&1; then
     STATUS=FAIL
   fi
   DURATION="$(( $(date +%s) - START ))s"
+
+  # Demo CLI (output JSON di una run reale) + screenshot UI headless.
+  if [ -f target/debug/wasmbox-cli ] && \
+     [ -f target/wasm32-unknown-unknown/release/guest_echo.wasm ]; then
+    CLI_DEMO=$(target/debug/wasmbox-cli run \
+      target/wasm32-unknown-unknown/release/guest_echo.wasm "ciao dal preview" \
+      --json 2>/dev/null)
+    export CLI_DEMO
+  fi
+  if [ -f target/debug/wasmbox-ui ] && \
+     [ -f target/wasm32-unknown-unknown/release/guest_echo.wasm ]; then
+    if target/debug/wasmbox-ui --screenshot target/preview-ui.bmp \
+      target/wasm32-unknown-unknown/release/guest_echo.wasm "demo" \
+      >/dev/null 2>&1; then
+      UI_SCREENSHOT_BMP="$PWD/target/preview-ui.bmp"
+      export UI_SCREENSHOT_BMP
+    fi
+  fi
+
 else
   echo "cargo non disponibile nel preview" >"$REPORT"
   STATUS=FAIL

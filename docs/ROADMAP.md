@@ -76,7 +76,7 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
 
 - `set-install`: `sh ./scripts/install.sh`
 - `set-build`: `sh ./scripts/build.sh`
-- `set`: `sh ./scripts/preview.sh` porta **8080** (esegue la suite e serve il report)
+- `set`: `sh ./scripts/preview.sh` porta **8080** (suite + demo CLI + screenshot UI Slint inline nella pagina)
 
 ---
 
@@ -147,6 +147,35 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
      tutti, unico campo obbligatorio della spec.
    - **Gap 4 — AGENTS.md stantio** (wasmtime 28, 20/20, pendenti già risolti
      mostrati come aperti): riscritto in questa sessione, verifica visiva ok.
+10. **Interfacce di fruizione (2026-10-09, questa sessione)** — risposta alla
+    richiesta utente: "non sarebbe il caso di avere una UI anche minimale per
+    testare l'applicativo? è pronto per agenti AI? CLI e skill?". Fatto:
+    - **CLI `crates/wasmbox-cli`** (membro workspace): `run <guest.wasm>
+      [input] [--json]`, input da argv o stdin pipe, output JSON una-riga su
+      stdout (log su stderr), **exit code deterministici** 0/2/3/…/10 mappati
+      1:1 sui `SandboxError`. Verificato reale: run guest echo con
+      `--json` → `{"ok":true,"output":"echo_result:INSPECT:TEST-INPUT"}` exit 0.
+    - **Skill `skills/wasmbox/SKILL.md`**: contract per agenti AI —
+      prerequisiti, invocazione, tabella exit code, politica di default
+      (`--json` sempre; mai ritentare su fuel/timeout/OOM; guest non fidato),
+      limiti espliciti della skill.
+    - **UI `crates/wasmbox-ui`** (membro workspace): Slint **senza
+      systemfonts** (`default-features = false`: niente fontconfig/fontdb,
+      trappola del build nel container) + font Noto embedded per il default
+      font della Window; modalità **headless** `--screenshot out.bmp
+      [guest.wasm] [input]` con `MinimalSoftwareWindow` + `SoftwareRenderer`
+      su pixel RGB e BMP 24-bit scritto a mano (zero dipendenze extra).
+      Verificato reale: BMP 320×240 magic `BM`, 230454 byte, **verde** con
+      guest ok (exit 0) e **rossa** con guest fallito (exit 12); senza
+      `set_size` dopo `show()` il render è vuoto (trappola documentata).
+    - **Preview aggiornato**: `scripts/preview.sh` esegue anche una run demo
+      CLI e uno screenshot UI, embeddati (CLI output + BMP base64) nella
+      pagina report HTML; `scripts/render_report.py` aggiornato (Wasmtime 49,
+      sezione demo). Trappola: env var da 300 KB fallisce
+      (`Argument list too long`) → il BMP passa per percorso file.
+    - **Docs**: blueprint → **v0.5** (nuova sezione INTERFACCE DI FRUIZIONE),
+      README (quickstart CLI/UI + sezione "Cosa NON è" aggiornata), AGENTS.md
+      (§3 con CLI/skill/UI), ROADMAP (questo punto), log.md.
 
 ---
 

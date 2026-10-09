@@ -1,4 +1,11 @@
-"""Renderizza il report dei test in HTML (letto da env: STATUS, REPORT, DURATION)."""
+"""Renderizza il report dei test in HTML (letto da env: STATUS, REPORT, DURATION).
+
+Extra (2026-10-09): se il preview ha anche eseguito CLI e UI demo,
+li mostra inline: il comando da riprodurre e il suo output (env
+CLI_DEMO), più lo screenshot Slint headless della UI (file BMP puntato
+da UI_SCREENSHOT_BMP, embeddato base64 — l'env var non regge 300 KB).
+"""
+import base64
 import html
 import os
 import pathlib
@@ -7,6 +14,11 @@ import re
 status = os.environ.get("STATUS", "UNKNOWN")
 report_path = os.environ.get("REPORT", "")
 duration = os.environ.get("DURATION", "n/a")
+cli_demo = os.environ.get("CLI_DEMO", "")
+ui_bmp_path = os.environ.get("UI_SCREENSHOT_BMP", "")
+ui_b64 = ""
+if ui_bmp_path and pathlib.Path(ui_bmp_path).exists():
+    ui_b64 = base64.b64encode(pathlib.Path(ui_bmp_path).read_bytes()).decode("ascii")
 
 raw = ""
 if report_path and pathlib.Path(report_path).exists():
@@ -25,6 +37,29 @@ colors = {
 color, label = colors.get(status, ("#8899aa", status))
 
 body = html.escape(raw)
+
+# --- Sezione demo (CLI live + UI screenshot) — generata solo se presenti ---
+def demo_html() -> str:
+    pre = html.escape(cli_demo)
+    img = (
+        f'<img src="data:image/bmp;base64,{ui_b64}" width="320" height="240" '
+        'alt="screenshot della UI Slint headless di wasmbox-ui">'
+        if ui_b64
+        else "<p>screenshot UI non disponibile</p>"
+    )
+    return f"""
+  <h2>Prova la sandbox ora (CLI live, comandi copia-incolla)</h2>
+  <p class="sub">bash dentro il preview: esegue wasmbox-cli sul guest reale — la stessa skill usata dagli agenti AI.</p>
+  <pre style="user-select:all">cargo run -p wasmbox-cli -- run target/wasm32-unknown-unknown/release/guest_echo.wasm "ciao" --json</pre>
+  <h2>Output dell'ultima demo CLI eseguita dal preview</h2>
+  <pre>{pre}</pre>
+  <h2>UI Slint (screenshot headless, BPM renderizzato dal SoftwareRenderer)</h2>
+  {img}
+  <p class="sub">Verde = ultima run guest ok, rossa = fallita. Generato da <code>wasmbox-ui --screenshot</code>.</p>
+"""
+
+demo = demo_html()
+
 print(f"""<!doctype html>
 <html lang="it">
 <head>
@@ -48,13 +83,10 @@ print(f"""<!doctype html>
     background: {color}1a; color: {color}; border: 1px solid {color}66;
     font-weight: 700; letter-spacing: .12em; font-size: 13px;
   }}
-  .stats {{ display: flex; gap: 16px; margin: 28px 0; flex-wrap: wrap; }}
-  .stat {{
-    flex: 1 1 160px; background: #121821; border: 1px solid #1e2733;
-    border-radius: 12px; padding: 18px 20px;
+  h2 {{ color: #eef4fa; }}
+  img {{
+    border: 1px solid #1e2733; border-radius: 12px; display: block; margin: 10px 0;
   }}
-  .stat .n {{ font-size: 30px; font-weight: 700; color: #eef4fa; }}
-  .stat .l {{ font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #5b6b7c; margin-top: 4px; }}
   pre {{
     background: #121821; border: 1px solid #1e2733; border-radius: 12px;
     padding: 20px; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
@@ -68,7 +100,7 @@ print(f"""<!doctype html>
 <div class="wrap">
   <div class="brand">wasmbox &middot; sandbox wasm</div>
   <h1>Report di validazione</h1>
-  <div class="sub">SandboxEngine &middot; Wasmtime 28 &middot; suite <code>cargo test -p wasmbox-core</code></div>
+  <div class="sub">SandboxEngine &middot; Wasmtime 49 &middot; suite <code>cargo test -p wasmbox-core</code></div>
 
   <span class="badge">{label}</span>
 
@@ -78,11 +110,13 @@ print(f"""<!doctype html>
     <div class="stat"><div class="n">{html.escape(duration)}</div><div class="l">durata suite</div></div>
   </div>
 
+  {demo}
+
   <pre>{body}</pre>
 
   <footer>
-    Workspace: <code>crates/wasmbox-core</code> + <code>examples/guest-echo</code><br>
-    Spec: <code>docs/blueprint.md</code> &middot; validazione: check, clippy -D warnings, fmt, wasm32 build
+    Workspace: <code>crates/wasmbox-core</code> + <code>crates/wasmbox-cli</code> + <code>crates/wasmbox-ui</code> + <code>examples/guest-echo</code><br>
+    Skill agenti: <code>skills/wasmbox/SKILL.md</code> &middot; Spec: <code>docs/blueprint.md</code>
   </footer>
 </div>
 </body>

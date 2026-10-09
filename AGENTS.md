@@ -35,11 +35,16 @@ cargo build -p guest-echo --target wasm32-unknown-unknown --release
 
 - Prodotto: **completo e validato** (27/27 test, CI + CodeQL verdi, GHAS attivo).
 - Repo GitHub canonico: `matrixNeo76/wasmbox` (pubblico, `main`, commit `7a65dfc`).
-- Preview: `sh ./scripts/preview.sh` su porta 8080 (report dei test).
+- Preview: `sh ./scripts/preview.sh` su porta 8080 (report dei test + demo CLI
+  + screenshot UI Slint).
 - Benchmark reali: compile freddo 1.355 ms, cache-hit 0.136 ms, overhead `ask` ~0.7 µs.
-- **What wasmbox NON è ancora**: solo una **libreria** — non esiste CLI né
-  endpoint HTTP/server per interrogarlo da un agente AI esterno; per il dettaglio
-  vedi ROADMAP §2.9 (opzioni future, nessuna avviata).
+- **Interfacce di fruizione (2026-10-09)**:
+  - **CLI** `crates/wasmbox-cli`: `wasmbox-cli run <guest.wasm> [input] [--json]`,
+    exit code 0/2≤10 deterministici — è LA via per umani e agenti AI;
+  - **Skill agenti**: `skills/wasmbox/SKILL.md` (contract completo per un agente);
+  - **UI** `crates/wasmbox-ui`: Slint headless, `wasmbox-ui --screenshot out.bmp
+    [guest.wasm] [input]` produce BMP 320×240 (verde=ok, rossa=fail);
+  - nay endpoint HTTP/FFI (se mai servissero: ROADMAP §2.9, non avviati).
 - **OKF v0.2**: la `docs/` è in formato Open Knowledge Format v0.2 (frontmatter
   YAML su ogni concept; `index.md` + `log.md` riservati).
 - **graphify / reactgraph**: DECISO di NON introdurli finché il repo resta

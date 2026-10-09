@@ -8,6 +8,19 @@ updated: "2026-10-09"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-09 — interfacce di fruizione (CLI + skill + UI)
+
+- Blueprint → **v0.5**: nuova sezione "INTERFACCE DI FRUIZIONE" con la spec
+  di `wasmbox-cli` (exit code 0/2..10, `--json`), `wasmbox-ui`
+  (screenshot BMP headless, senza systemfonts) e la skill agenti.
+- ROADMAP §3 punto 10: cronologia della sessione con prove.
+- README: quickstart CLI/UI, struttura workspace aggiornata (necessario),
+  sezione "Cosa NON è" riscritta (CLI/skill/UI ora presenti; restano fuori
+  endpoint HTTP e FFI).
+- AGENTS.md §3: stato con CLI/skill/UI e preview aggiornato.
+- `scripts/preview.sh` + `scripts/render_report.py`: report con demo CLI
+  (output JSON reale) e screenshot UI embedded; fix stale "Wasmtime 28".
+
 ## 2026-10-09 — audit di completamento + OKF v0.2
 
 - Prima riga dell'indirizzo in `ROADMAP.md`, `blueprint.md`,
