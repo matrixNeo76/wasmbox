@@ -1,5 +1,7 @@
 # wasmbox
 
+[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/matrixNeo76/wasmbox?utm_source=oss&utm_medium=github&utm_campaign=matrixNeo76%2Fwasmbox&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
+
 **Esecutore WebAssembly isolato ad alte prestazioni** — un workspace Rust che
 permette a un'applicazione host di eseguire codice non fidato (plugin, script
 generati da LLM, agenti decisionali) in un ambiente dove il guest:

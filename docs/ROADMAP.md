@@ -4,7 +4,7 @@
 > nuovo agente, collaboratore) deve poter partire da qui. Spec tecnica completa:
 > [`blueprint.md`](blueprint.md). Integrazione sicurezza:
 > [`github-advanced-security.md`](github-advanced-security.md).
-> Ultimo aggiornamento: 2026-10-08.
+> Ultimo aggiornamento: 2026-10-09.
 
 ---
 
@@ -24,7 +24,7 @@ scripts/                 # install, build, preview, ghas-status, push_via_api
 .github/dependabot.yml   # cargo + github-actions weekly
 ```
 
-Validazione (2026-10-08, su wasmtime 49.0, tutti exit 0):
+Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
 
 | Check | Comando | Esito |
 |---|---|---|
@@ -40,21 +40,22 @@ Validazione (2026-10-08, su wasmtime 49.0, tutti exit 0):
 ### 1.2 GitHub — CANONICO E VERIFICATO ✅
 
 - Repo: **`https://github.com/matrixNeo76/wasmbox`** (pubblico, branch `main`)
-- Contenuto: **23 file, byte-identici alla copia locale** (verifica sha1 blob)
-- La storia remota è **pulita** (3 commit iniziali via API, senza artefatti):
-  se il git locale divergesse, il remoto è la fonte di verità
-  (`git fetch && git reset --hard origin/main`)
+- Contenuto: **25 file, byte-identici alla copia locale** (verifica sha1 blob;
+  `git ls-files | wc -l` = 25)
+- La storia remota è **pulita** (commit initiali via API + migrazione wasmtime 49
+  spinta il 2026-10-09, `c2963d7`): se il git locale divergesse, il remoto è la
+  fonte di verità (`git fetch && git reset --hard origin/main`)
 
 ### 1.3 CI / Sicurezza — ATTIVO ✅
 
 | Componente | Stato | Note |
 |---|---|---|
 | CodeQL | ✅ run **success** | FIX applicato: Rust richiede `build-mode: none` (non `manual`) |
-| Dependabot version updates | ✅ funzionante | 2 PR aperte: #2 `wasmtime 28 → 49.0.2` **adottata in locale e validata** (chiuderla dopo il commit della migrazione); #1 `actions/checkout 4 → 7` (bump sicuro, da mergiare) |
+| Dependabot version updates | ✅ funzionante | **0 PR aperte** (2026-10-09): #2 `wasmtime 28 → 49.0.2` **chiusa** (supersita dalla migrazione locale spinta in `c2963d7`); #1 `actions/checkout 4 → 7` **mergiata** (commit `0795a37`) |
 | Dependabot alerts | ✅ abilitati | 0 alert |
 | Secret scanning + push protection | ✅ abilitati | via API |
 | Actions | ✅ illimitate | repo pubblico |
-| CodeRabbit | ❌ non installato | serve installazione manuale dal marketplace (OAuth utente) |
+| CodeRabbit | ✅ **integrato** | App già installata dall'utente su tutti i suoi repo pubblici; badge nel README (verificato 2026-10-09) |
 
 ### 1.4 Preview Freebuff — CONFIGURATO
 
@@ -85,11 +86,13 @@ Validazione (2026-10-08, su wasmtime 49.0, tutti exit 0):
    `wasmtime::Result`/`wasmtime::Error` — `IntoFunc` in 49 non accetta più
    `anyhow::Result`), dipendenza `anyhow` rimossa, blueprint → v0.3.
    Baseline 5/5 verde su 49: check, **20/20 test** (guest e2e reale incluso),
-   clippy `-D warnings`, fmt, guest wasm32. Resta all'utente:
-   - salvare/commitare i cambi dal pannello Changes di Freebuff;
-   - **chiudere la PR #2** (toca solo Cargo.toml/lock: da sola romperebbe `main`);
-   - mergiare la PR #1 `actions/checkout 4 → 7` (bump sicuro).
-6. **CodeRabbit** (facoltativo): installare dal GitHub Marketplace sul repo `wasmbox`.
+   clippy `-D warnings`, fmt, guest wasm32. **Completato il 2026-10-09**:
+   - cambi salvati e spinti dal pannello Changes (commit `c2963d7`);
+   - **PR #2 chiusa** con commento di supersessione (da sola avrebbe rotto `main`);
+   - **PR #1 mergiata** (`0795a37`); CodeQL verde su entrambi i push.
+6. ~~**CodeRabbit**~~ ✅ **GIÀ INTEGRATO** (2026-10-09): l'utente ha l'App
+   installata su tutti i suoi repo pubblici; badge `coderabbit/prs` aggiunto
+   al README. Nessuna azione.
 7. **`graphify` / `reactgraph` — DECISO: differiti** (decisione utente 2026-10-08):
    l'utente li usa di norma per leggere codice/UI, ma il repo è piccolo e
    autoesplicativo → **non introdurli** finché non serve; rivalutare se il
@@ -125,6 +128,14 @@ Validazione (2026-10-08, su wasmtime 49.0, tutti exit 0):
     `wasmtime::Error`) → 5/5 verdi con 20/20 test; blueprint → v0.3, README
     aggiornato a Wasmtime 49; `wasm-executor` confermato inesistente (404);
     `git`/`gh` confermati funzionanti con la credenzia gestita Freebuff.
+11. Sessione 2026-10-09: baseline 5/5 rieseguita → rimosso `std::process::id()`
+    da `engine.rs` (nome tmp cache via timestamp ns: la grep letterale del
+    blueprint "zero `std::process`" ora passa) → preview riconfigurato
+    (`install`/`build`/`set ... 8080`) e verificato `ready` con report PASS;
+    **PR #2 chiusa, PR #1 mergiata** (credenzia gestita Freebuff),
+    `git pull --rebase` + **push `c2963d7`**, CodeQL `success` su merge e push;
+    Roadmap allineata allo stato reale; badge CodeRabbit aggiunto al README
+    (l'App risulta già installata sui repo dell'utente).
 
 ---
 
