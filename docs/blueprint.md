@@ -1,10 +1,16 @@
-# BLUEPRINT — `wasmbox` (specifica di riferimento v0.3)
+# BLUEPRINT — `wasmbox` (specifica di riferimento v0.4)
 
 > Questo documento è la specifica autorevole del progetto. Va salvato prima di scrivere codice
 > (richiesta esplicita dell'utente) e consultato durante tutta l'implementazione.
 >
 > v0.3 (2026-10-08): migrazione a **wasmtime 49.0** — dipendenza `anyhow` rimossa;
 > host function e `map_guest_error` usano `wasmtime::Result` / `wasmtime::Error`.
+>
+> v0.4 (2026-10-09): aggiunte post-validazione approvate dall'utente —
+> **`examples/host-run`** (membro workspace, esempio lato host), **`benches/perf.rs`**
+> (`harness = false`, solo std: nessuna dipendenza aggiunta), **7 test di robustezza**
+> (boundary payload, memoria, concorrenza → 27 totali) e **metadati crates.io**
+> (`repository`/`homepage`/`readme`/`keywords`/`categories`, `cargo publish --dry-run` OK).
 
 # OBIETTIVO
 
@@ -19,7 +25,7 @@ PRINCIPIO ARCHITETTURALE: `wasmbox-core` non sa nulla del mondo esterno. Sa solo
 
 ```
 wasmbox/
-├── Cargo.toml                    # workspace root, members = ["crates/wasmbox-core", "examples/guest-echo"]
+├── Cargo.toml                    # workspace root, members = ["crates/wasmbox-core", "examples/guest-echo", "examples/host-run"]
 ├── docs/blueprint.md             # questo documento
 ├── crates/wasmbox-core/
 │   ├── Cargo.toml
@@ -29,10 +35,14 @@ wasmbox/
 │   │   ├── error.rs
 │   │   ├── memory.rs
 │   │   └── engine.rs
+│   ├── benches/perf.rs           # v0.4: bench harness=false, solo std
 │   └── tests/e2e_test.rs
-└── examples/guest-echo/
-    ├── Cargo.toml                # crate-type = ["cdylib"]
-    └── src/lib.rs
+├── examples/guest-echo/
+│   ├── Cargo.toml                # crate-type = ["cdylib"]
+│   └── src/lib.rs
+└── examples/host-run/            # v0.4: esempio lato host
+    ├── Cargo.toml                # bin, dipende da wasmbox-core (path)
+    └── src/main.rs
 ```
 
 # DIPENDENZE
@@ -45,10 +55,15 @@ thiserror = "2.0"
 
 [dev-dependencies]
 wat = "1"
+
+[[bench]]
+name = "perf"
+harness = false   # v0.4: bench solo-std, nessuna dipendenza aggiunta
 ```
 NIENTE wasmtime-wasi, niente serde/serde_json, niente `anyhow` (rimosso con la migrazione a 49:
 le host function restituiscono `wasmtime::Result`, che è l'unico tipo accettato da `IntoFunc`),
-niente altre dipendenze.
+niente altre dipendenze. Il bench v0.4 è scritto con la sola `std` + la dev-dep `wat`
+per rispettare questo divieto (niente criterion).
 
 # CONTRATTO ABI (vincolante)
 
@@ -194,6 +209,19 @@ Test richiesti (tutti devono passare):
 13. `test_guest_free_called_on_response`: 10 run consecutive con input `msg{i}`, output `starts_with(b"host_saw[")`.
 14. Cache hit: secondo `SandboxEngine::new` con stesso `cache_dir` riusa `.cwasm` senza errori.
 15. Opzionale `guest_echo_e2e`: se l'env var `GUEST_ECHO_WASM` punta all'artefatto di guest-echo, eseguirlo (output `echo_result:host_saw[inspect:...]`); altrimenti skip silenzioso con `eprintln!` (la suite deve restare verde senza il target wasm32).
+
+### Test di robustezza (v0.4, 16–22)
+
+16. `test_request_payload_exactly_at_limit_ok`: input di lunghezza **esattamente**
+    `max_ask_payload_bytes` ⇒ passa (il controllo è `> max`).
+17. `test_request_payload_one_over_limit`: `max + 1` ⇒ `PayloadTooLarge { size, max }` esatti.
+18. `test_response_payload_exactly_at_limit_ok`: handler che risponde **esattamente** `max` byte ⇒ passa.
+19. `test_response_payload_one_over_limit`: risposta `max + 1` ⇒ `PayloadTooLarge` (lato risposta).
+20. `test_memory_growth_bounded_by_limit`: `memory.grow` entro il limite ⇒ ok;
+    oltre `max_memory_bytes` ⇒ **-1 (no trap)**.
+21. `test_oversized_initial_memory_rejected`: modulo con memoria iniziale oltre il limite ⇒ `InvalidWasm` a `new`.
+22. `test_concurrent_engines_share_cache_dir`: 4 thread × engine propri sullo stesso `cache_dir`
+    (race sui tmp della cache + isolamento ticker).
 
 # VALIDAZIONE FINALE (tutte obbligatorie)
 

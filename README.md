@@ -28,8 +28,10 @@ né la richiesta né la risposta di `ask` — sono bytes opachi.
 
 ```
 ├── crates/wasmbox-core/     # il motore: config, error, memory, engine
-│   └── tests/e2e_test.rs    # suite e2e (20 test)
+│   ├── tests/e2e_test.rs    # suite test (27: 5 unit + 22 e2e)
+│   └── benches/perf.rs      # benchmark solo-std (cargo bench)
 ├── examples/guest-echo/     # guest Wasm di esempio (wasm32-unknown-unknown)
+├── examples/host-run/       # esempio lato host: carica un guest, passa un handler
 ├── docs/blueprint.md        # specifica completa di progetto
 ├── docs/github-advanced-security.md
 └── scripts/                 # install / build / preview / verifica
@@ -48,6 +50,12 @@ cargo build -p guest-echo --target wasm32-unknown-unknown --release
 cargo check --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --check
+
+# esempio host (dopo aver buildato il guest)
+cargo run -p host-run -- target/wasm32-unknown-unknown/release/guest_echo.wasm "ciao"
+
+# benchmark (compile freddo/cache, overhead di ask)
+cargo bench -p wasmbox-core
 ```
 
 ## Contratto ABI (guest)

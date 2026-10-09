@@ -27,6 +27,26 @@ impl HostHandler for FailingHandler {
     }
 }
 
+/// Handler che risponde sempre `b"ok"` (2 byte): isola i boundary del limite
+/// di payload dagli effetti della lunghezza della risposta echo.
+struct ShortHandler;
+
+impl HostHandler for ShortHandler {
+    fn ask(&mut self, _request: &[u8]) -> Result<Vec<u8>, HostError> {
+        Ok(b"ok".to_vec())
+    }
+}
+
+/// Handler che risponde con una risposta di lunghezza esatta `n` byte:
+/// serve per i boundary `== max` / `max + 1` sul lato risposta.
+struct SizedHandler(usize);
+
+impl HostHandler for SizedHandler {
+    fn ask(&mut self, _request: &[u8]) -> Result<Vec<u8>, HostError> {
+        Ok(vec![b'x'; self.0])
+    }
+}
+
 /// Modulo echo: bump allocator fittizio (base 1024, allineamento 8),
 /// `guest_free` no-op, `guest_run` inoltra l'input a `ask` e restituisce
 /// la risposta dell'host come output (packed).
@@ -403,4 +423,173 @@ fn guest_echo_e2e() {
     let mut handler = EchoHandler;
     let out = engine.run(b"hello", &mut handler).expect("run");
     assert_eq!(out, b"echo_result:host_saw[inspect:hello]");
+}
+
+// ---------------------------------------------------------------------------
+// Robustezza oltre la spec (blueprint v0.4): boundary dei limiti, memoria
+// guest, istanziazione, concorrenza.
+// ---------------------------------------------------------------------------
+
+/// Richiesta `ask` con lunghezza ESATTAMENTE uguale al limite: deve passare
+/// (il controllo è `> max`, non `>= max`).
+#[test]
+fn test_request_payload_exactly_at_limit_ok() {
+    let wasm = parse(ECHO_WAT);
+    let config = SandboxConfig {
+        max_ask_payload_bytes: 64,
+        max_fuel: None,
+        epoch_timeout: None,
+        ..Default::default()
+    };
+    let engine = SandboxEngine::new(&wasm, config).expect("engine");
+    let mut handler = ShortHandler;
+    let input = vec![b'a'; 64]; // == max_ask_payload_bytes
+    let out = engine.run(&input, &mut handler).expect("run al limite");
+    assert_eq!(out, b"ok");
+}
+
+/// Richiesta un byte oltre il limite ⇒ `PayloadTooLarge` con size/max esatti.
+#[test]
+fn test_request_payload_one_over_limit() {
+    let wasm = parse(ECHO_WAT);
+    let config = SandboxConfig {
+        max_ask_payload_bytes: 64,
+        max_fuel: None,
+        epoch_timeout: None,
+        ..Default::default()
+    };
+    let engine = SandboxEngine::new(&wasm, config).expect("engine");
+    let mut handler = ShortHandler;
+    let input = vec![b'a'; 65]; // max + 1
+    let err = engine.run(&input, &mut handler).unwrap_err();
+    assert!(
+        matches!(err, SandboxError::PayloadTooLarge { size: 65, max: 64 }),
+        "got {err:?}"
+    );
+}
+
+/// Risposta host ESATTAMENTE al limite: deve passare.
+#[test]
+fn test_response_payload_exactly_at_limit_ok() {
+    let wasm = parse(ECHO_WAT);
+    let config = SandboxConfig {
+        max_ask_payload_bytes: 64,
+        max_fuel: None,
+        epoch_timeout: None,
+        ..Default::default()
+    };
+    let engine = SandboxEngine::new(&wasm, config).expect("engine");
+    let mut handler = SizedHandler(64); // == max
+    let out = engine.run(b"x", &mut handler).expect("run al limite");
+    assert_eq!(out.len(), 64, "attesi 64 byte di risposta");
+    assert!(out.iter().all(|b| *b == b'x'));
+}
+
+/// Risposta host un byte oltre il limite ⇒ `PayloadTooLarge` (lato risposta).
+#[test]
+fn test_response_payload_one_over_limit() {
+    let wasm = parse(ECHO_WAT);
+    let config = SandboxConfig {
+        max_ask_payload_bytes: 64,
+        max_fuel: None,
+        epoch_timeout: None,
+        ..Default::default()
+    };
+    let engine = SandboxEngine::new(&wasm, config).expect("engine");
+    let mut handler = SizedHandler(65); // max + 1
+    let err = engine.run(b"x", &mut handler).unwrap_err();
+    assert!(
+        matches!(err, SandboxError::PayloadTooLarge { size: 65, max: 64 }),
+        "got {err:?}"
+    );
+}
+
+/// Guest che prova a crescere la memoria oltre `max_memory_bytes`:
+/// `memory.grow` deve restituire -1 (fallimento gestito, NON trap) e la
+/// crescita entro il limite deve funzionare.
+const MEM_GROW_WAT: &str = r#"
+(module
+  (memory (export "memory") 1)
+  (func (export "guest_alloc") (param i32) (result i32) (i32.const 1024))
+  (func (export "guest_free") (param i32 i32))
+  (func (export "guest_run") (param i32 i32) (result i64)
+    ;; crescita entro il limite (10 pagine): restituisce le pagine precedenti (1)
+    (i32.store (i32.const 1024) (memory.grow (i32.const 10)))
+    ;; crescita oltre il limite (1000 pagine = 64 MiB > 16 MiB): -1
+    (i32.store (i32.const 1028) (memory.grow (i32.const 1000)))
+    ;; pack(1024, 8)
+    (i64.const 4398046511112)
+  )
+)
+"#;
+
+#[test]
+fn test_memory_growth_bounded_by_limit() {
+    let wasm = parse(MEM_GROW_WAT);
+    let engine = SandboxEngine::new(&wasm, SandboxConfig::default()).expect("engine");
+    let mut handler = EchoHandler;
+    let out = engine.run(b"", &mut handler).expect("run");
+    assert_eq!(out.len(), 8, "attesi due i32 (grow ok, grow rifiutata)");
+    let grow_ok = i32::from_le_bytes(out[0..4].try_into().expect("4 byte"));
+    let grow_denied = i32::from_le_bytes(out[4..8].try_into().expect("4 byte"));
+    assert_eq!(grow_ok, 1, "crescita entro il limite deve riuscire");
+    assert_eq!(
+        grow_denied, -1,
+        "crescita oltre max_memory_bytes deve essere rifiutata con -1, non trap"
+    );
+}
+
+/// Modulo con memoria iniziale (400 pagine = 25 MiB) oltre `max_memory_bytes`
+/// (16 MiB): la sandbox deve rifiutarlo a `new`, senza panic.
+const OVERSIZE_MEM_WAT: &str = r#"
+(module
+  (memory (export "memory") 400)
+  (func (export "guest_alloc") (param i32) (result i32) (i32.const 0))
+  (func (export "guest_free") (param i32 i32))
+  (func (export "guest_run") (param i32 i32) (result i64) (i64.const 0))
+)
+"#;
+
+#[test]
+fn test_oversized_initial_memory_rejected() {
+    let wasm = parse(OVERSIZE_MEM_WAT);
+    let result = SandboxEngine::new(&wasm, SandboxConfig::default());
+    let err = match result {
+        Err(e) => e,
+        Ok(_) => panic!("memoria iniziale oltre il limite deve essere rifiutata"),
+    };
+    assert!(matches!(err, SandboxError::InvalidWasm(_)), "got {err:?}");
+}
+
+/// Concorrenza: 4 thread, ognuno con il proprio engine, condividono lo STESSO
+/// `cache_dir` — esercita la race sui file temporanei della cache `.cwasm`
+/// (nome `{hash}.{ns}.tmp` + rename atomico) e la isolazione dei ticker.
+#[test]
+fn test_concurrent_engines_share_cache_dir() {
+    let wasm = parse(ECHO_WAT);
+    let dir = temp_cache_dir("cache-concurrent");
+    let mut handles = Vec::new();
+    for t in 0..4 {
+        let wasm = wasm.clone();
+        let dir = dir.clone();
+        handles.push(std::thread::spawn(move || {
+            let config = SandboxConfig {
+                cache_dir: Some(dir),
+                max_fuel: None,
+                epoch_timeout: None,
+                ..Default::default()
+            };
+            let engine = SandboxEngine::new(&wasm, config).expect("engine");
+            let mut h = EchoHandler;
+            for i in 0..3 {
+                let input = format!("t{t}i{i}");
+                let out = engine.run(input.as_bytes(), &mut h).expect("run");
+                assert!(out.starts_with(b"host_saw["), "got {out:?}");
+            }
+        }));
+    }
+    for h in handles {
+        h.join().expect("thread non deve panicare");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
 }

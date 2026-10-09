@@ -4,6 +4,11 @@ version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 description = "Esecutore WebAssembly isolato ad alte prestazioni con limiti di risorsa e una singola host function opaca `ask`."
+repository = "https://github.com/matrixNeo76/wasmbox"
+homepage = "https://github.com/matrixNeo76/wasmbox"
+readme = "../../README.md"
+keywords = ["wasm", "webassembly", "sandbox", "wasmtime", "isolation"]
+categories = ["wasm", "memory-management", "development-tools"]
 
 [dependencies]
 wasmtime = { version = "49.0", default-features = false, features = [
@@ -18,3 +23,7 @@ thiserror = "2.0"
 
 [dev-dependencies]
 wat = "1"
+
+[[bench]]
+name = "perf"
+harness = false

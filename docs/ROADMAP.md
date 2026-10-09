@@ -16,9 +16,10 @@ Workspace Rust (Wasmtime 49) che esegue codice Wasm non fidato con limiti di
 risorsa e una sola host function opaca `ask`.
 
 ```
-crates/wasmbox-core/     # config, error, memory, engine + tests/e2e_test.rs
+crates/wasmbox-core/     # config, error, memory, engine + tests/e2e_test.rs + benches/perf.rs
 examples/guest-echo/     # guest wasm32 (cdylib)
-docs/blueprint.md        # SPEC COMPLETA (vincolante)
+examples/host-run/       # esempio host: carica un guest e gli passa un HostHandler
+docs/blueprint.md        # SPEC COMPLETA (vincolante, v0.4)
 scripts/                 # install, build, preview, ghas-status, push_via_api
 .github/workflows/       # CI (baseline: check/test/clippy/fmt/guest) + CodeQL
 .github/dependabot.yml   # cargo + github-actions weekly
@@ -32,7 +33,7 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
 | Typecheck | `cargo check --workspace` | 0 |
 | Lint | `cargo clippy --workspace --all-targets -- -D warnings` | 0 |
 | Formattazione | `cargo fmt --all --check` | 0 |
-| Test | `cargo test -p wasmbox-core` | 0 — **20/20** (5 unit + 15 e2e) |
+| Test | `cargo test -p wasmbox-core` | 0 — **27/27** (5 unit + 22 e2e) |
 | Guest wasm32 | `cargo build -p guest-echo --target wasm32-unknown-unknown --release` | 0 |
 | E2E guest reale | `GUEST_ECHO_WASM=... cargo test ... guest_echo_e2e` | ok (non skippato) |
 
@@ -144,6 +145,18 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
     compilava né testava: la baseline girava solo in locale) e i file
     `LICENSE-MIT` / `LICENSE-APACHE` (mancanti nonostante la doppia licenza
     dichiarata). Entrambi i punti approvati dall'utente come prioritari.
+13. Sessione 2026-10-09 (seguito 2 — punti D+C+E+F approvati):
+    - **D**: 7 test di robustezza (boundary `== max`/`max+1` su richiesta e
+      risposta, `memory.grow` oltre il limite ⇒ -1, memoria iniziale oversize
+      ⇒ `InvalidWasm`, 4 thread su stesso `cache_dir`) → **27/27**;
+    - **C**: `examples/host-run` (membro workspace, run reale verificata:
+      `echo_result:INSPECT:CIAO DA WASMBOX`);
+    - **E**: `benches/perf.rs` con harness=false e **solo std** (nessuna
+      dipendenza) — numeri reali: compile freddo 1.355 ms, cache-hit 0.136 ms
+      (~10×), overhead round-trip `ask` 0.7 µs;
+    - **F**: metadati crates.io + `cargo publish --dry-run` → **exit 0**
+      (12 file, 86.1 KiB);
+    - blueprint → **v0.4**.
 
 ---
 

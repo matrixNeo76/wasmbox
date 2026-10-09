@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/wasmbox-core", "examples/guest-echo"]
+members = ["crates/wasmbox-core", "examples/guest-echo", "examples/host-run"]
 
 [workspace.package]
 edition = "2021"
