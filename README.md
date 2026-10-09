@@ -9,7 +9,7 @@ generati da LLM, agenti decisionali) in un ambiente dove il guest:
 - **può comunicare** con l host solo tramite una singola funzione generica,
   opaca: `env::ask(req_ptr, req_len) -> i64`.
 
-Il runtime è basato su **[Wasmtime 28](https://wasmtime.dev/)** con fuel
+Il runtime è basato su **[Wasmtime 49](https://wasmtime.dev/)** con fuel
 metering, epoch interruption (timeout wall-clock), `StoreLimits` espliciti,
 pooling allocator e cache `.cwasm` precompilata.
 

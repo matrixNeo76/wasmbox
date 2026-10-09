@@ -11,7 +11,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use anyhow::anyhow;
 use wasmtime::*;
 
 use crate::config::{SandboxConfig, EPOCH_TICK};
@@ -290,8 +289,13 @@ fn compile_and_cache(
     let module = Module::new(engine, wasm).map_err(|e| SandboxError::InvalidWasm(e.to_string()))?;
 
     if let Ok(serialized) = module.serialize() {
-        // Nome tmp univoco per processo: evita race condition tra processi.
-        let tmp: PathBuf = cache_dir.join(format!("{hash}.{}.tmp", std::process::id()));
+        // Nome tmp univoco (timestamp a nanosecondi): evita race tra processi
+        // senza usare l'API di processo (vietata dalla spec).
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp: PathBuf = cache_dir.join(format!("{hash}.{stamp}.tmp"));
         if std::fs::write(&tmp, &serialized).is_ok() {
             let _ = std::fs::rename(&tmp, cwasm_path);
         }
@@ -302,44 +306,43 @@ fn compile_and_cache(
 
 /// Host function `ask`: l'unica capability che il guest può invocare.
 ///
-/// Restituisce `anyhow::Result<i64>` (mai `Trap::new`) così gli errori
+/// Restituisce `wasmtime::Result<i64>` (mai `Trap::new`) così gli errori
 /// tipizzati sopravvivono al downcast in [`map_guest_error`].
 fn ask_host_function(
     mut caller: Caller<'_, StoreContext>,
     req_ptr: i32,
     req_len: i32,
-) -> anyhow::Result<i64> {
+) -> wasmtime::Result<i64> {
     // --- 1. Budget di chiamate ---
     let max_calls = caller.data().config.max_ask_calls;
     if caller.data().calls_made >= max_calls {
-        return Err(anyhow!(SandboxError::AskLimitExceeded(max_calls)));
+        return Err(SandboxError::AskLimitExceeded(max_calls).into());
     }
 
     // --- 2. Limite payload richiesta ---
     let max_payload = caller.data().config.max_ask_payload_bytes;
     if (req_len as usize) > max_payload {
-        return Err(anyhow!(SandboxError::PayloadTooLarge {
+        return Err(SandboxError::PayloadTooLarge {
             size: req_len as usize,
             max: max_payload,
-        }));
+        }
+        .into());
     }
 
     // --- 3. Lettura richiesta ---
     let memory = caller
         .get_export("memory")
         .and_then(|e| e.into_memory())
-        .ok_or_else(|| anyhow!(SandboxError::MissingExport("memory".into())))?;
+        .ok_or_else(|| SandboxError::MissingExport("memory".into()))?;
 
     let req_bytes = {
         let data = memory.data(&caller);
         let start = req_ptr as usize;
         let end = start
             .checked_add(req_len as usize)
-            .ok_or_else(|| anyhow!(SandboxError::MemoryAccess("ptr+len overflow".into())))?;
+            .ok_or_else(|| SandboxError::MemoryAccess("ptr+len overflow".into()))?;
         if end > data.len() {
-            return Err(anyhow!(SandboxError::MemoryAccess(
-                "request out of bounds".to_string()
-            )));
+            return Err(SandboxError::MemoryAccess("request out of bounds".to_string()).into());
         }
         data[start..end].to_vec()
     };
@@ -349,38 +352,35 @@ fn ask_host_function(
     // --- 4. Handler (dominio interamente lato host) ---
     // SAFETY: `handler` è valido per l'intero scope di `run()`; lo Store
     // non sopravvive alla chiamata e tutto resta sul thread chiamante.
-    let resp_bytes = unsafe { (*caller.data_mut().handler).ask(&req_bytes) }
-        .map_err(|e| anyhow!(SandboxError::Host(e)))?;
+    let resp_bytes =
+        unsafe { (*caller.data_mut().handler).ask(&req_bytes) }.map_err(SandboxError::Host)?;
 
     // --- 5. Limite payload risposta ---
     if resp_bytes.len() > max_payload {
-        return Err(anyhow!(SandboxError::PayloadTooLarge {
+        return Err(SandboxError::PayloadTooLarge {
             size: resp_bytes.len(),
             max: max_payload,
-        }));
+        }
+        .into());
     }
 
     // --- 6. Allocazione buffer risposta nel guest ---
     let alloc_fn = caller
         .get_export("guest_alloc")
         .and_then(|e| e.into_func())
-        .ok_or_else(|| anyhow!(SandboxError::MissingExport("guest_alloc".into())))?
+        .ok_or_else(|| SandboxError::MissingExport("guest_alloc".into()))?
         .typed::<u32, u32>(&caller)
-        .map_err(|_| {
-            anyhow!(SandboxError::MemoryAccess(
-                "guest_alloc signature mismatch".to_string()
-            ))
-        })?;
+        .map_err(|_| SandboxError::MemoryAccess("guest_alloc signature mismatch".to_string()))?;
 
     let resp_len = resp_bytes.len() as u32;
     let resp_ptr = alloc_fn
         .call(&mut caller, resp_len)
-        .map_err(|e| anyhow!(SandboxError::Execution(format!("guest_alloc trap: {e}"))))?;
+        .map_err(|e| SandboxError::Execution(format!("guest_alloc trap: {e}")))?;
 
     // Allocazione maggiore di zero che restituisce 0 = out of memory:
     // mai scrivere all'offset 0.
     if resp_len > 0 && resp_ptr == 0 {
-        return Err(anyhow!(SandboxError::GuestOutOfMemory));
+        return Err(SandboxError::GuestOutOfMemory.into());
     }
 
     // --- 7. Scrittura risposta ---
@@ -389,11 +389,9 @@ fn ask_host_function(
         let start = resp_ptr as usize;
         let end = start
             .checked_add(resp_bytes.len())
-            .ok_or_else(|| anyhow!(SandboxError::MemoryAccess("ptr+len overflow".into())))?;
+            .ok_or_else(|| SandboxError::MemoryAccess("ptr+len overflow".into()))?;
         if end > data.len() {
-            return Err(anyhow!(SandboxError::MemoryAccess(
-                "response out of bounds".to_string()
-            )));
+            return Err(SandboxError::MemoryAccess("response out of bounds".to_string()).into());
         }
         data[start..end].copy_from_slice(&resp_bytes);
     }
@@ -401,13 +399,13 @@ fn ask_host_function(
     Ok(pack_ptr_len(resp_ptr, resp_len) as i64)
 }
 
-/// Estrae un `SandboxError` tipizzato se la catena di `anyhow::Error`
+/// Estrae un `SandboxError` tipizzato se la catena di `wasmtime::Error`
 /// lo contiene; altrimenti mappa il trap Wasmtime al variant più vicino.
 ///
 /// Si ispeziona l'intera catena con `e.chain()`: `downcast_ref` sul solo
 /// livello esterno non basta perché Wasmtime spesso incapsula gli errori
 /// delle host function in un `wasmtime::Trap` o in un frame interno.
-fn map_guest_error(e: &anyhow::Error) -> SandboxError {
+fn map_guest_error(e: &wasmtime::Error) -> SandboxError {
     for cause in e.chain() {
         // 1. Errore tipizzato dal nostro host function.
         if let Some(se) = cause.downcast_ref::<SandboxError>() {

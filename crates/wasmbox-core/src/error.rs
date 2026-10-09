@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// Errore restituito dall'host handler associato a una run.
 ///
-/// `Clone` è necessario perché `map_guest_error` riceve un `&anyhow::Error`
+/// `Clone` è necessario perché `map_guest_error` riceve un `&wasmtime::Error`
 /// e deve produrre un `SandboxError` owned senza poter muovere il valore:
 /// la clonazione è l'unica via. Contiene solo `String` e una variante unit,
 /// quindi è economico.

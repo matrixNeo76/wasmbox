@@ -12,7 +12,7 @@
 
 ### 1.1 Prodotto — COMPLETO E VALIDATO ✅
 
-Workspace Rust (Wasmtime 28) che esegue codice Wasm non fidato con limiti di
+Workspace Rust (Wasmtime 49) che esegue codice Wasm non fidato con limiti di
 risorsa e una sola host function opaca `ask`.
 
 ```
@@ -24,7 +24,7 @@ scripts/                 # install, build, preview, ghas-status, push_via_api
 .github/dependabot.yml   # cargo + github-actions weekly
 ```
 
-Validazione (ultima esecuzione, tutti exit 0):
+Validazione (2026-10-08, su wasmtime 49.0, tutti exit 0):
 
 | Check | Comando | Esito |
 |---|---|---|
@@ -50,7 +50,7 @@ Validazione (ultima esecuzione, tutti exit 0):
 | Componente | Stato | Note |
 |---|---|---|
 | CodeQL | ✅ run **success** | FIX applicato: Rust richiede `build-mode: none` (non `manual`) |
-| Dependabot version updates | ✅ funzionante | PR aperta: `wasmtime 28 → 49.0.2` — **decisione pending** (salto grande) |
+| Dependabot version updates | ✅ funzionante | 2 PR aperte: #2 `wasmtime 28 → 49.0.2` **adottata in locale e validata** (chiuderla dopo il commit della migrazione); #1 `actions/checkout 4 → 7` (bump sicuro, da mergiare) |
 | Dependabot alerts | ✅ abilitati | 0 alert |
 | Secret scanning + push protection | ✅ abilitati | via API |
 | Actions | ✅ illimitate | repo pubblico |
@@ -66,24 +66,35 @@ Validazione (ultima esecuzione, tutti exit 0):
 
 ## 2. PROSSIMI PASSI (in ordine di priorità)
 
-1. **Riconnessione GitHub / nuovo progetto**: il progetto Freebuff corrente ha il
-   nome del repo **bloccato su "wasm-executor"** nel form delle Settings
-   (bug: il nome è derivato dal nome del progetto). Soluzione: nuovo progetto
-   da `freebuff.com/cloud` → "Continue with GitHub" → scegli `matrixNeo76/wasmbox`
-   (oppure crea il progetto chiamandolo esattamente `wasmbox`).
-2. **Riprendere il lavoro**: nel nuovo progetto, leggere questo file +
-   `docs/blueprint.md`; la baseline dei test è al §1.1.
-3. **Revocare il PAT** usato per i push: GitHub → Settings → Developer settings →
-   Tokens (classic) → Revoke (è passato in chat).
-4. **Eliminare `matrixNeo76/wasm-executor`** (vuoto, creato dal pannello) — GitHub →
-   Danger Zone. (Deciso dall'utente.)
-5. **Decidere sulla PR Dependabot** `wasmtime 49` (il blueprint/la validazione sono
-   su 28.0 — aggiornare significa ri-validare tutta la suite con la nuova API).
+1. ~~**Riconnessione GitHub / nuovo progetto**~~ ✅ **RISOLTO** (verificato
+   2026-10-08): il progetto corrente è agganciato a `matrixNeo76/wasmbox`
+   (git remote corretto) e `git`/`gh` funzionano con la credenzia GitHub App
+   gestita Freebuff (`gh auth status` → freebuff-web[bot]). Nessuna azione.
+2. ~~**Riprendere il lavoro**~~ ✅ fatto: ROADMAP + `docs/blueprint.md` letti,
+   baseline §1.1 rieseguita (5/5 verdi).
+3. **Revocare il PAT** usato per i push — resta **solo azione manuale
+   dell'utente** (richiede il login su GitHub, non eseguibile dall'agente):
+   GitHub → Settings → Developer settings → Tokens (classic) → Revoke.
+   Ora è superfluo: la credenzia gestita Freebuff sostituisce il PAT.
+4. ~~**Eliminare `matrixNeo76/wasm-executor`**~~ ✅ **non esiste più**
+   (verificato 2026-10-08: REST 404 + GraphQL "Could not resolve" con
+   credenzia valida che vede gli altri repo dell'account). Nessuna azione.
+5. ~~**Decidere sulla PR Dependabot `wasmtime 49`**~~ ✅ **DECISO: adottata e
+   validata** (2026-10-08). Migrazione completa in workspace: `Cargo.toml`
+   (`28.0` → `49.0`), `engine.rs` (host function e `map_guest_error` su
+   `wasmtime::Result`/`wasmtime::Error` — `IntoFunc` in 49 non accetta più
+   `anyhow::Result`), dipendenza `anyhow` rimossa, blueprint → v0.3.
+   Baseline 5/5 verde su 49: check, **20/20 test** (guest e2e reale incluso),
+   clippy `-D warnings`, fmt, guest wasm32. Resta all'utente:
+   - salvare/commitare i cambi dal pannello Changes di Freebuff;
+   - **chiudere la PR #2** (toca solo Cargo.toml/lock: da sola romperebbe `main`);
+   - mergiare la PR #1 `actions/checkout 4 → 7` (bump sicuro).
 6. **CodeRabbit** (facoltativo): installare dal GitHub Marketplace sul repo `wasmbox`.
 7. **`graphify` / `reactgraph` — DECISO: differiti** (decisione utente 2026-10-08):
    l'utente li usa di norma per leggere codice/UI, ma il repo è piccolo e
    autoesplicativo → **non introdurli** finché non serve; rivalutare se il
-   repo cresce. (Nessuna traccia nel workspace: grep=0, zero dipendenze.)
+   repo cresce. (Nessuna traccia nel workspace: grep=0, zero dipendenze;
+   rieseguito 2026-10-08 → sempre 0.)
 8. **Segnalazione bug Freebuff** (facoltativa): aprire issue su
    `CodebuffAI/freebuff` sul nome repo bloccato (issue correlate note: #1403, #1423).
 
@@ -108,6 +119,12 @@ Validazione (ultima esecuzione, tutti exit 0):
 7. README creato e pushato; CodeQL fixato (`build-mode: none`) — run verde.
 8. Abilitati secret scanning, push protection, dependabot alerts (API).
 9. Ricerca Freebuff: nessun annuncio pubblico di deprecazione; issue note #1403/#1423.
+10. Sessione 2026-10-08 (ripresa): baseline 5/5 su wasmtime 28 → upgrade a
+    **wasmtime 49.0** valutato e adottato (2 soli punti di rottura: firma
+    `IntoFunc` che vuole `wasmtime::Result` e `guest_run.call` che restituisce
+    `wasmtime::Error`) → 5/5 verdi con 20/20 test; blueprint → v0.3, README
+    aggiornato a Wasmtime 49; `wasm-executor` confermato inesistente (404);
+    `git`/`gh` confermati funzionanti con la credenzia gestita Freebuff.
 
 ---
 
@@ -115,7 +132,7 @@ Validazione (ultima esecuzione, tutti exit 0):
 
 | # | Trappola | Fatto |
 |---|---|---|
-| 1 | Gate piattaforma: `git push/ls-remote/gh` verso GitHub → **bloccati** ("not connected") | usare `scripts/push_via_api.py` (REST API, non bloccata) |
+| 1 | ~~Gate piattaforma~~ **SUPERATO 2026-10-08**: `git` e `gh` ora funzionano (credenzia GitHub App gestita Freebuff, iniettata automaticamente; `gh auth status` → freebuff-web[bot]) | `scripts/push_via_api.py` resta solo come fallback storico |
 | 2 | `.env`/Keys **non propagano** i valori ai processi del terminale (`GITHUB_TOKEN` = lunghezza 0 sempre) | passare il token via stdin in chat, non da `.env` |
 | 3 | Pannello Settings: nome repo bloccato sul nome progetto (`wasm-executor`) | nuovo progetto (vedi §2.1) |
 | 4 | Pannello "save version" → errore `repo_not_connected` finché non si ricollega | riconnessione da Settings, oppure lavorare sul nuovo progetto |
@@ -129,7 +146,8 @@ Validazione (ultima esecuzione, tutti exit 0):
 
 - **Spec**: `docs/blueprint.md` è la fonte autoritativa del "cosa deve fare".
   Questo file è il "dove siamo".
-- **Comandi rapidi**: `sh ./scripts/install.sh` (toolchain), `sh ./scripts/build.sh`
+- **Comandi rapidi**: `sh ./scripts/install.sh` (toolchain — **`cargo` non è
+  preinstallato**: va eseguito prima di ogni comando di baseline), `sh ./scripts/build.sh`
   (check + guest wasm), `sh ./scripts/preview.sh` (test + report).
 - **Test opzionale guest reale**:
   `GUEST_ECHO_WASM=target/wasm32-unknown-unknown/release/guest_echo.wasm cargo test -p wasmbox-core`

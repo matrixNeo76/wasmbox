@@ -1,7 +1,10 @@
-# BLUEPRINT — `wasmbox` (specifica di riferimento v0.2)
+# BLUEPRINT — `wasmbox` (specifica di riferimento v0.3)
 
 > Questo documento è la specifica autorevole del progetto. Va salvato prima di scrivere codice
 > (richiesta esplicita dell'utente) e consultato durante tutta l'implementazione.
+>
+> v0.3 (2026-10-08): migrazione a **wasmtime 49.0** — dipendenza `anyhow` rimossa;
+> host function e `map_guest_error` usano `wasmtime::Result` / `wasmtime::Error`.
 
 # OBIETTIVO
 
@@ -37,14 +40,15 @@ wasmbox/
 `crates/wasmbox-core/Cargo.toml`:
 ```toml
 [dependencies]
-wasmtime = { version = "28.0", default-features = false, features = ["std", "runtime", "cranelift", "pooling-allocator", "cache", "parallel-compilation"] }
+wasmtime = { version = "49.0", default-features = false, features = ["std", "runtime", "cranelift", "pooling-allocator", "cache", "parallel-compilation"] }
 thiserror = "2.0"
-anyhow = "1.0"
 
 [dev-dependencies]
 wat = "1"
 ```
-NIENTE wasmtime-wasi, niente serde/serde_json, niente altre dipendenze.
+NIENTE wasmtime-wasi, niente serde/serde_json, niente `anyhow` (rimosso con la migrazione a 49:
+le host function restituiscono `wasmtime::Result`, che è l'unico tipo accettato da `IntoFunc`),
+niente altre dipendenze.
 
 # CONTRATTO ABI (vincolante)
 
@@ -115,7 +119,7 @@ Ordine di implementazione: `compute_wasm_hash` → `StoreContext` → `ask_host_
 4. `Linker<StoreContext>` con `func_wrap("env", "ask", ask_host_function)`, poi `linker.instantiate_pre(&module)` → `InstancePre` (costruita UNA volta, fuori da `run()`).
 5. Se `epoch_timeout` è `Some`: spawn di UN SOLO thread `"wasmbox-epoch-ticker"` che fa `sleep(EPOCH_TICK); engine.increment_epoch()` finché `ticker_stop` non è true. Mai un thread per run.
 
-`ask_host_function(mut caller: Caller<'_, StoreContext>, req_ptr: i32, req_len: i32) -> anyhow::Result<i64>` (MAI `Trap::new`, così gli errori tipizzati sopravvivono al downcast):
+`ask_host_function(mut caller: Caller<'_, StoreContext>, req_ptr: i32, req_len: i32) -> wasmtime::Result<i64>` (MAI `Trap::new`, così gli errori tipizzati sopravvivono al downcast; gli `SandboxError` si convertono con `.into()` via `From<E: Error>` e restano downcastabili):
 1. controllo `calls_made >= max_ask_calls` ⇒ `AskLimitExceeded`;
 2. controllo `req_len > max_ask_payload_bytes` ⇒ `PayloadTooLarge`;
 3. lettura richiesta da `memory.data(&caller)` con bounds check `ptr.checked_add(len)` ⇒ `MemoryAccess` fuori bounds; `calls_made += 1`;
@@ -135,7 +139,7 @@ Ordine di implementazione: `compute_wasm_hash` → `StoreContext` → `ask_host_
 - `guest_free` su input e output se `len > 0` (errore ignorato).
 - L'handler resta accessibile al chiamante dopo la run (API prende `&mut dyn HostHandler`, non `Box<dyn>`).
 
-`map_guest_error(e: &anyhow::Error) -> SandboxError`: iterare `e.chain()` (NON `downcast_ref` sul solo livello esterno): per ogni causa, prima `downcast_ref::<SandboxError>()` (ricostruire il variant owned, `Host(h.clone())`), poi `downcast_ref::<wasmtime::Trap>()`: `OutOfFuel ⇒ FuelExhausted`, `Interrupt ⇒ Timeout`, `UnreachableCodeReached ⇒ GuestOutOfMemory`, altro ⇒ `Execution(trap.to_string())`. Fallback: `Execution(e.to_string())`.
+`map_guest_error(e: &wasmtime::Error) -> SandboxError`: iterare `e.chain()` (NON `downcast_ref` sul solo livello esterno): per ogni causa, prima `downcast_ref::<SandboxError>()` (ricostruire il variant owned, `Host(h.clone())`), poi `downcast_ref::<wasmtime::Trap>()`: `OutOfFuel ⇒ FuelExhausted`, `Interrupt ⇒ Timeout`, `UnreachableCodeReached ⇒ GuestOutOfMemory`, altro ⇒ `Execution(trap.to_string())`. Fallback: `Execution(e.to_string())`.
 
 `Drop`: `ticker_stop.store(true)` + `join()` del ticker.
 
@@ -155,7 +159,7 @@ Guest Rust compilato per `wasm32-unknown-unknown`, `crate-type = ["cdylib"]`, co
 6. Mai un thread per `run()` — ticker unico per engine.
 7. Mai appiattire errori in `Trap::new` dentro l'host function.
 8. `map_guest_error` solo con `e.chain()`, mai `downcast_ref` sul livello esterno.
-9. API Wasmtime 28.0: `cache_config_load_default()` senza argomenti; `PoolingAllocationConfig::max_memory_size` in byte; `Module::serialize` / `Module::deserialize_file` per la cache. In caso di dubbio su una firma, consultare docs.rs per wasmtime 28.0.
+9. API Wasmtime 49.0: le host function usano `wasmtime::Result<T>` (mai `anyhow::Result` — `IntoFunc` non lo accetta più); `PoolingAllocationConfig::max_memory_size` in byte; `Module::serialize` / `Module::deserialize_file` per la cache. In caso di dubbio su una firma, consultare docs.rs per wasmtime 49.0.
 10. Solo due blocchi `unsafe` in `engine.rs` (transmute fat pointer + deref handler), entrambi documentati con invariante SAFETY. Se un cast `as` non compila tra `&mut dyn Trait` e `*mut (dyn Trait + 'static)`, la soluzione è il transmute confinato, non altre acrobazie.
 
 # ORDINE DI IMPLEMENTAZIONE
