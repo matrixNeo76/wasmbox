@@ -9,17 +9,25 @@ repository: **CodeQL code scanning**, **secret scanning** e **Dependabot**.
 |---|---|
 | `.github/workflows/codeql.yml` | Analisi CodeQL (linguaggio `rust`) su push, PR e scan settimanale; carica gli alert in GitHub → Security → Code scanning |
 | `.github/dependabot.yml` | Aggiornamenti settimanali delle dipendenze `cargo` e delle GitHub Actions (PR automatiche) |
-| `scripts/ghas-status.sh` | Verifica via API dello stato delle tre funzionalità usando `GITHUB_TOKEN` (senza mai stamparlo) |
+| `scripts/ghas-status.sh` | Verifica via `gh api` lo stato delle tre funzionalità — richiede un token nel processo (`GH_TOKEN=… sh ./scripts/ghas-status.sh`); non stampa mai il token |
 
-## Chiave da inserire nella tab **Keys** del progetto
+## Come eseguire la verifica (aggiornato 2026-10-09, con prove)
 
-| Nome chiave | Valore |
-|---|---|
-| `GITHUB_TOKEN` | Un **Personal Access Token classico con scope `repo`** (sufficiente per leggere code-scanning/secret-scanning/Dependabot alerts e per le operazioni su repo) |
+La credenziale GitHub App gestita funziona per `git`/`gh` **diretti**, ma:
+- **non si propaga** ai sottoprocessi di uno script (gh risponde "gh auth login");
+- **non ha il permesso** di lettura degli alert (HTTP 403 "Resource not
+  accessible by integration" sulle tre API alert).
 
-Crea il token da: GitHub → Settings → Developer settings → Personal access
-tokens → Tokens (classic) → Generate new token → scope **`repo`** → incolla
-il valore nella tab Keys del progetto (nessun'altra chiave è necessaria).
+Per la verifica programmatica dei tre tipi d'alert serve quindi un **token
+utente** con permesso di lettura degli alert, passato come variabile di
+processo — mai su riga di comando come argomento:
+
+```sh
+GH_TOKEN=ghp_… sh ./scripts/ghas-status.sh
+```
+
+Oppure, senza token: apri gli alert nel browser su
+**GitHub → repo → Security** (code scanning, secret scanning, Dependabot).
 
 ## Abilitazione lato GitHub (una tantum, dopo il push del repo)
 
@@ -31,6 +39,10 @@ il valore nella tab Keys del progetto (nessun'altra chiave è necessaria).
    *Dependabot alerts* (i PR li apre automaticamente grazie a
    `.github/dependabot.yml`).
 
+> Aggiornamento 2026-10-09: su questo repo **tutte e tre le feature sono
+> già attive** (verificate: 0 alert). L'abilitazione qui sopra resta come
+> riferimento storico.
+
 **Costi/licenze**: su **repo pubblici** code scanning, secret scanning e
 Dependabot sono **gratuiti**. Su repo **privati** richiedono una licenza
 GitHub Advanced Security (GHAS); senza licenza il workflow CodeQL restituirà
@@ -40,12 +52,12 @@ essere pubblico.
 ## Verifica
 
 ```sh
-sh ./scripts/ghas-status.sh
+GH_TOKEN=… sh ./scripts/ghas-status.sh
 ```
 
-Stampa HTTP code e conteggio degli alert aperti per ciascuna delle tre
-funzionalità. `404` = feature non abilitata o repo assente; `401` = token da
-rigenerare; `200` = integrazione attiva.
+Stampa il conteggio degli alert aperti per ciascuna delle tre funzionalità.
+Senza token nel processo, lo script riporta chiaramente "auth mancante per
+gh nel processo" invece di fallire in silenzio.
 
 **Prerequisito**: il repository deve essere pushato su GitHub
 (`matrixNeo76/wasmbox`) — il workflow parte al primo push.

@@ -1,39 +1,44 @@
 #!/bin/sh
 # Verifica lo stato di GitHub Advanced Security sul repo.
-# Richiede la chiave GITHUB_TOKEN (tab Keys del progetto) e il repo già
-# pubblicato su GitHub. Non stampa mai il valore del token.
+#
+# NOTA (2026-10-09, verificata con prove): la credenziale gestita del
+# terminale Freebuff viene iniettata per i comandi `gh` diretti, MA NON
+# si propaga ai sottoprocessi di questo script → gh risponde "gh auth login".
+# Lo script quindi DEVE ricevere un token esplicito nel processo:
+#   GH_TOKEN=… sh ./scripts/ghas-status.sh     (token utente, scope repo)
+# GITHUB_REPO permette di interrogare un altro repo.
 set -e
 
-TOKEN="${GITHUB_TOKEN:-}"
-if [ -z "$TOKEN" ]; then
-  echo "ERRORE: GITHUB_TOKEN mancante — aggiungilo nella tab Keys del progetto." >&2
+REPO="${GITHUB_REPO:-matrixNeo76/wasmbox}"
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "ERRORE: gh non disponibile — installa la GitHub CLI." >&2
   exit 1
 fi
-
-REPO="${GITHUB_REPO:-matrixNeo76/wasmbox}"
-API="https://api.github.com/repos/$REPO"
-TMP="$(mktemp)"
-trap 'rm -f "$TMP"' EXIT
 
 echo "Repo: $REPO"
 echo "---"
 
+# check <label> <path>: cattura l'output (stdout+stderr) in una variabile
+# e classifica sul contenuto — senza file temporanei.
 check() {
   label="$1"
   path="$2"
-  code=$(curl -s -o "$TMP" -w "%{http_code}" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Accept: application/vnd.github+json" \
-    -H "X-GitHub-Api-Version: 2022-11-28" \
-    "$API/$path")
-  total=$(grep -o '"total_count":[0-9]*' "$TMP" | head -1 | cut -d: -f2)
-  case "$code" in
-    200) echo "$label: HTTP 200 — alert aperti: ${total:-0}" ;;
-    401) echo "$label: HTTP 401 — token non valido o revocato" ;;
-    403) echo "$label: HTTP 403 — token senza permessi (scope 'repo'/'security_events')" ;;
-    404) echo "$label: HTTP 404 — repo inesistente o funzionalità non abilitata (serve GitHub Advanced Security sul repo privato; gratis su repo pubblici)" ;;
-    *)   echo "$label: HTTP $code" ;;
-  esac
+  ok="yes"
+  resp="$(gh api "repos/$REPO/$path" 2>&1)" || ok="no"
+
+  if [ "$ok" = "yes" ]; then
+    total=$(printf '%s' "$resp" | grep -o '"total_count":[0-9]*' | head -1 | cut -d: -f2)
+    echo "$label: HTTP 200 — alert aperti: ${total:-0}"
+  elif printf '%s' "$resp" | grep -q "Resource not accessible by integration"; then
+    echo "$label: HTTP 403 — la credenziale non può leggere gli alert (serve scope security_events)."
+  elif printf '%s' "$resp" | grep -q "gh auth login"; then
+    echo "$label: auth mancante per gh nel processo — imposta GH_TOKEN=… (per es.: GH_TOKEN=… sh ./scripts/ghas-status.sh) oppure esegui gh auth login"
+  elif printf '%s' "$resp" | grep -q "Not Found"; then
+    echo "$label: HTTP 404 — feature non abilitata (Settings → Code security) o repo assente"
+  else
+    echo "$label: errore — esegui: gh api repos/$REPO/$path"
+  fi
 }
 
 check "Code scanning  " "code-scanning/alerts?state=open&per_page=1"

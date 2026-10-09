@@ -56,6 +56,7 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
 | CI baseline | ✅ **aggiunta 2026-10-09** | `.github/workflows/ci.yml`: check, **test (con `GUEST_ECHO_WASM` reale)**, clippy `-D warnings`, fmt, guest wasm32, su push/PR. Prima **nessuna CI compilava/testava** (CodeQL è solo analisi statica) |
 | Dependabot version updates | ✅ funzionante | **0 PR aperte** (2026-10-09): #2 `wasmtime 28 → 49.0.2` **chiusa** (supersita dalla migrazione locale spinta in `c2963d7`); #1 `actions/checkout 4 → 7` **mergiata** (commit `0795a37`) |
 | Dependabot alerts | ✅ abilitati | 0 alert |
+| Lettura alert via API | ⚠️ **verificato 2026-10-09** | La credenziale gestita NON si propaga ai sottoprocessi (`gh` dentro script chiede "gh auth login") e ha scope limitato (HTTP 403 "Resource not accessible by integration" sulle alert). Per la lettura programmatica: `GH_TOKEN=… sh ./scripts/ghas-status.sh` con token utente 
 | Secret scanning + push protection | ✅ abilitati | via API |
 | Actions | ✅ illimitate | repo pubblico |
 | Licenze | ✅ **aggiunte 2026-10-09** | `LICENSE-MIT` + `LICENSE-APACHE` (prima mancavano, benché `Cargo.toml` dichiari `MIT OR Apache-2.0`) |
@@ -77,10 +78,9 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
    gestita Freebuff (`gh auth status` → freebuff-web[bot]). Nessuna azione.
 2. ~~**Riprendere il lavoro**~~ ✅ fatto: ROADMAP + `docs/blueprint.md` letti,
    baseline §1.1 rieseguita (5/5 verdi).
-3. **Revocare il PAT** usato per i push — resta **solo azione manuale
-   dell'utente** (richiede il login su GitHub, non eseguibile dall'agente):
-   GitHub → Settings → Developer settings → Tokens (classic) → Revoke.
-   Ora è superfluo: la credenzia gestita Freebuff sostituisce il PAT.
+3. ~~**Revocare il PAT**~~ **DECISO: NON CRITICO** (decisione utente
+   2026-10-09): il PAT resta attivo di proposito — l'utente lo vuole
+   disponibile per le sessioni agente. Nessuna azione programmatata.
 4. ~~**Eliminare `matrixNeo76/wasm-executor`**~~ ✅ **non esiste più**
    (verificato 2026-10-08: REST 404 + GraphQL "Could not resolve" con
    credenzia valida che vede gli altri repo dell'account). Nessuna azione.
