@@ -8,6 +8,15 @@ updated: "2026-10-09"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-09 — release GitHub con binari scaricabili
+
+- Nuovo workflow `.github/workflows/release.yml`: su tag `vX.Y.Z` builda
+  release (wasmbox-cli, wasmbox-ui, guest_echo.wasm), esegue baseline +
+  smoke test (CLI --json, screenshot BMP) e pubblica la release con tar.gz
+  + SHA-256. PRIMA non esistevano release su GitHub (verificato: 0).
+- README: sezione "Release GitHub" con istruzioni tag e uso dei binari.
+  Limitazione dichiarata: solo linux x86_64 per ora.
+
 ## 2026-10-09 — interfacce di fruizione (CLI + skill + UI)
 
 - Blueprint → **v0.5**: nuova sezione "INTERFACCE DI FRUIZIONE" con la spec

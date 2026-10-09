@@ -1,0 +1,71 @@
+# Release: build dei binari (wasmbox-cli, wasmbox-ui) + guest wasm e
+# pubblicazione delle release GitHub con artefatti scaricabili.
+#
+# Trigger: push di tag vX.Y.Z (es. v0.5.0). Per creare una release:
+#   git tag v0.5.0 && git push origin v0.5.0
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build + release
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Toolchain (stabile + wasm32)
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup override set stable
+
+      - name: Baseline (check + test) — non rilascio senza suite verde
+        env:
+          GUEST_ECHO_WASM: ""
+        run: |
+          cargo check --workspace
+          cargo test -p wasmbox-core
+
+      - name: Build release (binari host)
+        run: cargo build -p wasmbox-cli -p wasmbox-ui --release
+
+      - name: Build guest wasm32
+        run: cargo build -p guest-echo --target wasm32-unknown-unknown --release
+
+      - name: Fumo CLI (--json su guest reale)
+        run: |
+          OUT=$(target/release/wasmbox-cli run \
+            target/wasm32-unknown-unknown/release/guest_echo.wasm "smoke" --json)
+          echo "$OUT"
+          echo "$OUT" | grep -q '.ok.:true'
+
+      - name: Fumo UI (screenshot headless)
+        run: |
+          target/release/wasmbox-ui --screenshot ui-dim.bmp \
+            target/wasm32-unknown-unknown/release/guest_echo.wasm "smoke"
+          [ "$(head -c 2 ui-dim.bmp)" = "BM" ]
+
+      - name: Pacchetto artefatti
+        run: |
+          dir=wasmbox-${GITHUB_REF#refs/tags/}-x86_64-linux
+          mkdir -p "$dir"
+          cp target/release/wasmbox-cli target/release/wasmbox-ui "$dir/"
+          cp target/wasm32-unknown-unknown/release/guest_echo.wasm "$dir/"
+          cp README.md LICENSE-MIT LICENSE-APACHE "$dir/"
+          tar czf "$dir.tar.gz" "$dir"
+          sha256sum "$dir.tar.gz" > "$dir.tar.gz.sha256"
+
+      - name: Crea release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            wasmbox-*-x86_64-linux.tar.gz
+            wasmbox-*-x86_64-linux.tar.gz.sha256
+          generate_release_notes: true

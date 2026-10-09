@@ -146,6 +146,30 @@ La scelta è deliberata: il blueprint vieta logica di dominio nel crate `core`,
 e un protocollo di interfaccia È logica di dominio — sta in un crate separato
 sopra `wasmbox-core` (CLI e UI seguono già questa regola).
 
+## Release GitHub (binari scaricabili)
+
+Ogni tag `vX.Y.Z` → release automatica con binari precompilati
+(linux x86_64): `wasmbox-cli`, `wasmbox-ui`, `guest_echo.wasm` + README,
+licenze, checksum SHA-256. Il workflow (`.github/workflows/release.yml`)
+esegue baseline e smoke test **prima** di pubblicare.
+
+```sh
+git tag v0.5.0
+git push origin v0.5.0   # build + release automatica
+```
+
+I binari si usano così (nessun Rust richiesto):
+
+```sh
+tar xzf wasmbox-v0.5.0-x86_64-linux.tar.gz
+cd wasmbox-v0.5.0-x86_64-linux
+./wasmbox-cli run guest_echo.wasm "ciao" --json
+./wasmbox-ui --screenshot ui.bmp guest_echo.wasm "ciao"
+```
+
+Nota: i binari sono **linux x86_64** — niente macOS/Windows per ora
+(serve aggiungere runner multipli in release.yml, tracciato nel ROADMAP).
+
 ## Pubblicazione su crates.io
 
 `wasmbox-core` è pronto (`cargo publish --dry-run` = 0, 12 file). Nota: il nome
