@@ -38,10 +38,12 @@ if command -v cargo >/dev/null 2>&1; then
   fi
   if [ -f target/debug/wasmbox-ui ] && \
      [ -f target/wasm32-unknown-unknown/release/guest_echo.wasm ]; then
-    if target/debug/wasmbox-ui --screenshot target/preview-ui.bmp \
+    if target/debug/wasmbox-ui --screenshot target/preview-site/ui-screenshot.bmp \
       target/wasm32-unknown-unknown/release/guest_echo.wasm "demo" \
       >/dev/null 2>&1; then
-      UI_SCREENSHOT_BMP="$PWD/target/preview-ui.bmp"
+      # Path passato al renderer solo come segnale di presenza: la pagina
+      # referenzia il file relativo "ui-screenshot.bmp" accanto a index.html.
+      UI_SCREENSHOT_BMP="$SITE/ui-screenshot.bmp"
       export UI_SCREENSHOT_BMP
     fi
   fi

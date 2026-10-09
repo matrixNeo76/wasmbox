@@ -76,7 +76,7 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
 
 - `set-install`: `sh ./scripts/install.sh`
 - `set-build`: `sh ./scripts/build.sh`
-- `set`: `sh ./scripts/preview.sh` porta **8080** (suite + demo CLI + screenshot UI Slint inline nella pagina)
+- `set`: `sh ./scripts/preview.sh` porta **8080** (suite + demo CLI + screenshot UI Slint come file separato `ui-screenshot.bmp`)
 
 ---
 
@@ -176,6 +176,17 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
     - **Docs**: blueprint → **v0.5** (nuova sezione INTERFACCE DI FRUIZIONE),
       README (quickstart CLI/UI + sezione "Cosa NON è" aggiornata), AGENTS.md
       (§3 con CLI/skill/UI), ROADMAP (questo punto), log.md.
+15. **Sessione 2026-10-09 (seguito — fix delivery preview)** — l'utente non
+    vedeva la UI Slint nella preview: la pagina HTML era **312 KB** perché il
+    BMP era incorporato inline in base64 (~307 KB); alcuni viewer tagliano/
+    inibiscono lo scroll su volumi simili. Fix: `render_report.py` referenzia
+    ora il file **separato** `ui-screenshot.bmp` (copiato dallo script in
+    `target/preview-site/`, accanto a `index.html`) con link di download;
+    pagina HTML da 312 KB → **3 KB**. Verificato live: `GET /` 200,
+    `GET /ui-screenshot.bmp` 200 con magic `BM` e 230.454 byte. Nota onesta:
+    nel preview la UI resta uno **screenshot statico** (Slint è nativo, non
+    gira nel browser); l'interazione vera è via `wasmbox-cli` o il binario
+    desktop con backend winit.
 
 ---
 

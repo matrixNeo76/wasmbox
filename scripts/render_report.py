@@ -41,8 +41,10 @@ body = html.escape(raw)
 # --- Sezione demo (CLI live + UI screenshot) — generata solo se presenti ---
 def demo_html() -> str:
     pre = html.escape(cli_demo)
+    # L'immagine va copiata accanto a index.html e referenziata dal nome:
+    # inline base64 ingrossa la pagina di ~300 KB e alcuni viewer la tagliano.
     img = (
-        f'<img src="data:image/bmp;base64,{ui_b64}" width="320" height="240" '
+        '<img src="ui-screenshot.bmp" width="320" height="240" '
         'alt="screenshot della UI Slint headless di wasmbox-ui">'
         if ui_b64
         else "<p>screenshot UI non disponibile</p>"
@@ -53,9 +55,9 @@ def demo_html() -> str:
   <pre style="user-select:all">cargo run -p wasmbox-cli -- run target/wasm32-unknown-unknown/release/guest_echo.wasm "ciao" --json</pre>
   <h2>Output dell'ultima demo CLI eseguita dal preview</h2>
   <pre>{pre}</pre>
-  <h2>UI Slint (screenshot headless, BPM renderizzato dal SoftwareRenderer)</h2>
+  <h2>UI Slint (screenshot headless, renderizzato dal SoftwareRenderer)</h2>
   {img}
-  <p class="sub">Verde = ultima run guest ok, rossa = fallita. Generato da <code>wasmbox-ui --screenshot</code>.</p>
+  <p class="sub">Verde = ultima run guest ok, rossa = fallita. Immagine separata: <a href="ui-screenshot.bmp" download>ui-screenshot.bmp</a>. Generato da <code>wasmbox-ui --screenshot</code>.</p>
 """
 
 demo = demo_html()

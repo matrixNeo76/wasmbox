@@ -88,7 +88,7 @@ limit/payload · 7 errore handler · 8 export mancante · 9 wasm invalido ·
 
 ```sh
 cargo build -p wasmbox-ui
-# screenshot BPM 320×240: verde = run guest ok, rossa = fallita
+# screenshot BMP 320×240: verde = run guest ok, rossa = fallita
 target/debug/wasmbox-ui --screenshot screenshot.bmp \
   target/wasm32-unknown-unknown/release/guest_echo.wasm "ciao"
 ```

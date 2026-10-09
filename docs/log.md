@@ -20,6 +20,10 @@ updated: "2026-10-09"
 - AGENTS.md §3: stato con CLI/skill/UI e preview aggiornato.
 - `scripts/preview.sh` + `scripts/render_report.py`: report con demo CLI
   (output JSON reale) e screenshot UI embedded; fix stale "Wasmtime 28".
+- Fix delivery preview (seguente): il BMP non è più incorporato inline
+  (pagina 312 KB → 3 KB); la pagina referenzia `ui-screenshot.bmp` come
+  file separato con link di download. Motivo: viewer/tagli scroll su pagine
+  HTML troppo grandi — l'immagine era presente ma non raggiungibile.
 
 ## 2026-10-09 — audit di completamento + OKF v0.2
 

@@ -21,8 +21,8 @@ updated: "2026-10-09"
 > (boundary payload, memoria, concorrenza → 27 totali) e **metadati crates.io**
 > (`repository`/`homepage`/`readme`/`keywords`/`categories`, `cargo publish --dry-run` OK).
 >
-> v0.5 (2026-10-09): **interfacce di fruizione** — la libreria kora era inutilizzabile
-> senza scrivere Rust. Aggiunti: **`crates/wasmbox-cli`** (CLI per umani e agenti AI:
+> v0.5 (2026-10-09): **interfacce di fruizione** — la libreria rimaneva
+> inutilizzabile senza scrivere Rust. Aggiunti: **`crates/wasmbox-cli`** (CLI per umani e agenti AI:
 > input da argv/stdin, `--json` machine-readable, exit code deterministici),
 > **`crates/wasmbox-ui`** (UI minimale Slint con screenshot BMP headless via
 > `SoftwareRenderer` su `MinimalSoftwareWindow`, senza fontconfig di sistema:
