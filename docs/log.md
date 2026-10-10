@@ -8,6 +8,15 @@ updated: "2026-10-10"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-10 — matrice multipiattaforma VERIFICATA in CI (tag v0.5.1)
+
+- Tag `v0.5.1` spinto → workflow Release: **tutti e 4 i job verdi**
+  (ubuntu-latest, macos-15, macos-15-intel, windows-2025).
+- Release `v0.5.1` con gli **8 asset attesi**: 4 archivi con target-triple
+  (3× tar.gz + 1× .zip su Windows) + 4 file .sha256.
+- ROADMAP §2.0 aggiornato col riscontro reale: la matrice diventa la release
+  standard per ogni tag successivo.
+
 ## 2026-10-10 — spec + piano per la portabilità multipiattaforma (v0.6)
 
 - Richiesta utente: usare wasmbox in TUTTI gli ambienti, non solo Linux.

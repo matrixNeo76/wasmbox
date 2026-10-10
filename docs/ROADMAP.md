@@ -4,7 +4,7 @@ title: "wasmbox — ROADMAP & stato del progetto"
 description: "Documento di continuità: dove siamo, cosa è fatto, cosa è pending, cronologia e trappole note."
 resource: "docs/ROADMAP.md"
 tags: ["roadmap", "status", "continuity", "wasmbox"]
-updated: "2026-10-09"
+updated: "2026-10-10"
 ---
 
 # wasmbox — ROADMAP & STATO DEL PROGETTO
@@ -14,7 +14,7 @@ updated: "2026-10-09"
 > [`blueprint.md`](blueprint.md). Integrazione sicurezza:
 > [`github-advanced-security.md`](github-advanced-security.md).
 > Documentazione in formato **OKF v0.2** (Open Knowledge Format): vedi
-> [`index.md`](index.md). Ultimo aggiornamento: 2026-10-09.
+> [`index.md`](index.md). Ultimo aggiornamento: 2026-10-10.
 
 ---
 
@@ -101,6 +101,16 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
    `macos-14` in ritiro → usare macos-15/15-intel). Codice Rust INVARIATO:
    i crate sono std-puri, cambia solo la superficie di rilascio.
    Implementazione: nuovo `release.yml` a matrice + tag di verifica `v0.5.1`.
+   ✅ **VERIFICATO IN CI (2026-10-10, tag `v0.5.1`) — CONCLUSO**: tutti e 4 i
+   job della matrice **success** (linux, macOS arm64, macOS Intel, Windows MSVC);
+   la release `v0.5.1` espone i **8 asset attesi** (4 archivi con target-triple
+   + 4 .sha256). Prova d'uso su linux: download da GitHub, `sha256sum -c` OK,
+   `wasmbox-cli … --json` → `{"ok":true,"output":"echo_result:INSPECT:RELEASE-TEST-51"}`
+   exit 0; `wasmbox-ui --screenshot` → exit 0, BMP valido (magic `BM`).
+   La matrice è ora la release standard per ogni tag successivo. Residui
+   minori: verifica d'uso binaria su mac/win richiede le rispettive macchine
+   (gli asset sono lì per chi le possiede); il workflow mac/win è stato
+   comunque verificato end-to-end in CI (build + smoke CLI+UI + upload).
 1. ~~**Riconnessione GitHub / nuovo progetto**~~ ✅ **RISOLTO** (verificato
    2026-10-08): il progetto corrente è agganciato a `matrixNeo76/wasmbox`
    (git remote corretto) e `git`/`gh` funzionano con la credenzia GitHub App
