@@ -8,6 +8,19 @@ updated: "2026-10-10"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-10 — mappa dei concetti OKF come grafo nel preview
+
+- Richiesta utente: indice OKF + grafo (vis.js/d3). Deciso col cliente:
+  grafo nel preview report (`scripts/render_report.py`), generato al volo
+  scansionando i link markdown reali — zero drift con il repo; niente
+  `docs/graph.html` permanente (coerente con la decisione «no graphify»
+  del 2026-10-08) ma la funzione `build_okf_graph` è riusabile per un
+  evento standalone futuro.
+- Verificato: 8 nodi (5 doc bundle + README/AGENTS/SKILL), 18 archi reali
+  deduplicati; vis-network via CDN; JS inline e JSON grafo validati;
+  preview gratuitato `freebuff-preview restart` → pagina servita con
+  sezione grafo (`id="okf-graph"`) + screenshot UI (HTTP 200).
+
 ## 2026-10-10 — matrice multipiattaforma VERIFICATA in CI (tag v0.5.1)
 
 - Tag `v0.5.1` spinto → workflow Release: **tutti e 4 i job verdi**

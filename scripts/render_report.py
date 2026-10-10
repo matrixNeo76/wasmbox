@@ -4,9 +4,16 @@ Extra (2026-10-09): se il preview ha anche eseguito CLI e UI demo,
 li mostra inline: il comando da riprodurre e il suo output (env
 CLI_DEMO), più lo screenshot Slint headless della UI (file BMP puntato
 da UI_SCREENSHOT_BMP, embeddato base64 — l'env var non regge 300 KB).
+
+Extra (2026-10-10): mappa dei concetti OKF come grafo interattivo
+(vis-network via CDN). I nodi sono i file markdown del bundle
+(concept + riservati index/log + file di fruzione fuori da docs/);
+gli archi sono i link markdown realmente presenti nei file, scansionati
+al momento del render: zero drift, il grafo è sempre fresco col repo.
 """
 import base64
 import html
+import json
 import os
 import pathlib
 import re
@@ -62,6 +69,114 @@ def demo_html() -> str:
 
 demo = demo_html()
 
+
+# --- Mappa dei concetti OKF: grafo statico con vis-network (CDN) ---
+# Nodi = file markdown rilevanti; archi = link markdown tra loro, scansionati
+# ora dal repo. Funzione separata e riusabile (futura emissione standalone).
+TYPE_SHAPE = {  # type del frontmatter (o family per i riservati)
+    "Specification": "#8ec7ff",
+    "Reference": "#f0c674",
+    "Collection": "#3ecf8e",
+    "Log": "#b48ead",
+}
+
+def frontmatter_type(text: str) -> str:
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    if m:
+        t = re.search(r"^type:\s*\"?([A-Za-z ]+)\"?", m.group(1), re.M)
+        if t:
+            return t.group(1).strip()
+    return "Fuori bundle"
+
+def build_okf_graph(root: pathlib.Path) -> dict:
+    nodes: dict[str, dict] = {}
+    edges: list[dict] = []
+
+    # Nodi candidati: bundle docs/ + file di fruzione rilevanti.
+    candidates: list[tuple[str, pathlib.Path, str]] = []
+    for p in sorted((root / "docs").glob("*.md")):
+        candidates.append((f"docs/{p.name}", p, "docs"))
+    extras = [
+        ("README.md", root / "README.md"),
+        ("AGENTS.md", root / "AGENTS.md"),
+        ("skills/wasmbox/SKILL.md", root / "skills/wasmbox/SKILL.md"),
+    ]
+    for name, p in extras:
+        if p.exists():
+            candidates.append((name, p, "root"))
+
+    # Pass 1: registra TUTTI i nodi (serve perché un link da docs/ verso
+    # un file fuori bundle come ../AGENTS.md trovi il nodo destinazione).
+    types: dict[str, str] = {}
+    for node_id, path, family in candidates:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        ftype = frontmatter_type(text)
+        types[node_id] = ftype
+        color = TYPE_SHAPE.get(ftype, "#8899aa")
+        shape = "dot"
+        if node_id in ("docs/index.md", "docs/log.md"):
+            shape = "diamond"  # riservati per convenzione OKF
+        nodes[node_id] = {
+            "id": node_id,
+            "label": node_id,
+            "title": html.escape(ftype),
+            "color": color,
+            "shape": shape,
+        }
+
+    # Pass 2: scansiona i link markdown dai corpi e crea gli archi
+    # (doppioni di esatta fonte+destino deduplicati: un link ripetuto due
+    # volte nello stesso file è un solo collegamento nel grafo).
+    seen_edges: set[tuple[str, str]] = set()
+    edges: list[dict] = []
+    for node_id, path, family in candidates:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        body_text = re.sub(r"^---\n.*?\n---\n", "", text, count=1, flags=re.S)
+        for m in re.finditer(r"\[[^\]]*\]\((?!#|http)([^)\s]+)", body_text):
+            target = m.group(1)
+            target = re.sub(r"[#].*$", "", target).strip()
+            if not target or not target.endswith(".md"):
+                continue
+            resolved = (path.parent / target).resolve()
+            try:
+                rel = str(resolved.relative_to(root))
+            except ValueError:
+                continue
+            if rel in nodes and rel != node_id:
+                key = (node_id, rel)
+                if key not in seen_edges:
+                    seen_edges.add(key)
+                    edges.append({"from": node_id, "to": rel})
+
+    return {"nodes": list(nodes.values()), "edges": edges}
+
+
+graph = build_okf_graph(pathlib.Path(".").resolve())
+graph_json = json.dumps(graph, ensure_ascii=False, separators=(",", ":"))
+
+graph_section = f"""
+  <h2>Mappa dei concetti OKF v0.2 (grafo dei link reali)</h2>
+  <p class="sub">Nodi = file markdown del bundle (colore = <code>type</code> del frontmatter; rombo = riservati index/log). Archi = link markdown realmente presenti nei file, scansionati al momento del render: sempre freschi col repo. Clic su un nodo per vederne il titolo.</p>
+  <div id="okf-graph" style="width:100%;height:480px;border:1px solid #1e2733;border-radius:12px;background:#121821"></div>
+"""
+
+graph_js = f"""
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script>
+(function () {{
+  var g = {graph_json};
+  var nodes = new vis.DataSet(g.nodes);
+  var edges = new vis.DataSet(g.edges);
+  new vis.Network(document.getElementById("okf-graph"), {{ nodes: nodes, edges: edges }}, {{
+    autoResize: true,
+    physics: {{ solver: "forceAtlas2Based", forceAtlas2Based: {{ gravitationalConstant: -60, springLength: 110 }} , stabilization: true }},
+    interaction: {{ hover: true, tooltipDelay: 120 }},
+  }});
+}})();
+</script>
+"""
+
+
 print(f"""<!doctype html>
 <html lang="it">
 <head>
@@ -96,6 +211,15 @@ print(f"""<!doctype html>
   }}
   footer {{ margin-top: 28px; color: #46566a; font-size: 12px; line-height: 1.7; }}
   code {{ color: #8ec7ff; }}
+  .stats {{
+    display: flex; gap: 28px; margin: 22px 0 30px;
+  }}
+  .stat {{
+    background: #121821; border: 1px solid #1e2733; border-radius: 12px;
+    padding: 16px 22px; min-width: 120px;
+  }}
+  .stat .n {{ font-size: 26px; font-weight: 700; color: #eef4fa; }}
+  .stat .l {{ color: #7c8b9c; font-size: 12px; margin-top: 4px; }}
 </style>
 </head>
 <body>
@@ -114,12 +238,16 @@ print(f"""<!doctype html>
 
   {demo}
 
+  {graph_section}
+</div>
+
+{graph_js}
+
   <pre>{body}</pre>
 
   <footer>
     Workspace: <code>crates/wasmbox-core</code> + <code>crates/wasmbox-cli</code> + <code>crates/wasmbox-ui</code> + <code>examples/guest-echo</code><br>
     Skill agenti: <code>skills/wasmbox/SKILL.md</code> &middot; Spec: <code>docs/blueprint.md</code>
   </footer>
-</div>
 </body>
 </html>""")
