@@ -8,6 +8,22 @@ updated: "2026-10-10"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-10 — nuova guida d'integrazione (docs/integration.md)
+
+- Richiesta utente: documento approfondito su come implementare wasmbox in
+  altri sistemi, applicativi e agenti — il buco era confermato dalla
+  ricerca (SKILL.md copre solo la via CLI e dichiara il proprio limite;
+  host-run è un esempio senza spiegazione).
+- Creato `docs/integration.md` (OKF v0.2, `type: Guide`): le tre vie
+  (binaria/libreria/estensioni), mappa exit code CLI con politica per
+  agente, `SandboxConfig` campo per campo con default reali dal sorgente,
+  mappa completa `SandboxError` con politica host, protocollo consigliato
+  sopra `ask` (request/response tipizzate lato host), template guest
+  conforme + validazione con input ostile, checklist finale.
+- `index.md` aggiornato (riga concept + ordine di lettura); il grafo nel
+  preview raccoglierà i nuovi nodi/links automaticamente al prossimo
+  render (scan on-the-fly dei link).
+
 ## 2026-10-10 — mappa dei concetti OKF come grafo nel preview
 
 - Richiesta utente: indice OKF + grafo (vis.js/d3). Deciso col cliente:
