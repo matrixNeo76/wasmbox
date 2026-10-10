@@ -17,7 +17,7 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | File | `type` | Contenuto |
 |---|---|---|
 | [blueprint.md](blueprint.md) | Specification | Spec vincolante: obiettivo, ABI, limiti, divieti, interfacce di fruizione (v0.6 con matrice release 4 target), test, validazione |
-| [integration.md](integration.md) | Guide | Guida all'integrazione: tre vie d'uso (CLI per agenti, libreria per applicativi Rust, estensioni future), SandboxConfig campo per campo, mappa errori, protocollo su `ask`, authoring guest, 3 scenari provabili, checklist |
+| [integration.md](integration.md) | Guide | Guida all'integrazione: quattro vie d'uso (CLI per agenti, libreria per applicativi Rust, HTTP `wasmbox-http`, FFI `wasmbox-ffi` + tool LLM opzionale), SandboxConfig campo per campo, mappa errori, protocollo su `ask`, authoring guest, 6 scenari provabili (A–F), checklist |
 | [ROADMAP.md](ROADMAP.md) | Specification | Dove siamo, prossimi passi, cronologia completa, trappole note, contesto per il prossimo agente |
 | [github-advanced-security.md](github-advanced-security.md) | Reference | Stato CodeQL / secret scanning / Dependabot, procedure di verifica e abilitazione |
 | [extension-plan.md](extension-plan.md) | Specification | Piano v0.7: M1 fuel-only, scenario D (HTTP), E (FFI/C-ABI), F (tool LLM via OpenRouter) — spec, ABI, prove |
