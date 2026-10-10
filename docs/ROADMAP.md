@@ -144,6 +144,13 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
    - **Docs**: `integration.md` aggiornata (4 vie d'uso: CLI, libreria,
      HTTP, FFI + sezione Estensioni FATTE con prove), `index.md`, `log.md`,
      questo punto; baseline completa da rieseguire prima del push.
+   - **Candidati scenari G/H (proposti, NON implementati — decisione
+     utente aperta)**: la nuova guida [`scenarios.md`](scenarios.md)
+     documenta 6 ricette d'integrazione via `ask` (FastAPI ask-proxy,
+     gRPC bridge, LLM tool-bus, CLI, serverless, FFI in-process); la prima
+     da implementare, su richiesta, sarebbe **S1 FastAPI ask-proxy** come
+     scenario G: handler `ProxyHandler` (feature opt-in) in `wasmbox-http`
+     che inoltra le richieste `ask` a un endpoint FastAPI di dominio.
 1. ~~**Riconnessione GitHub / nuovo progetto**~~ ✅ **RISOLTO** (verificato
    2026-10-08): il progetto corrente è agganciato a `matrixNeo76/wasmbox`
    (git remote corretto) e `git`/`gh` funzionano con la credenzia GitHub App

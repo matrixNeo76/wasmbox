@@ -8,6 +8,25 @@ updated: "2026-10-10"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-10 — nuova guida scenari d'integrazione (docs/scenarios.md)
+
+- Richiesta utente: documentazione approfondita su come implementare gli
+  scenari più diffusi agganciati al core via `ask` (primo spunto: backend
+  FastAPI), comprendibile da LLM e umani.
+- Creato `docs/scenarios.md` (OKF v0.2, `type: Guide`) con **6 ricette
+  complete**: S1 FastAPI ask-proxy (handler Rust che inoltra `ask` al
+  backend Python — architettura, codice Rust+Python, latency, sicurezza),
+  S2 gRPC bridge (tonic + caveat tokio current-thread), S3 agente LLM
+  tool-bus (flusso invertito vs scenario F, limits consigliati), S4
+  CLI/subprocess con contratto JSON (già implementato), S5 serverless
+  (tabella per provider, caveat cold-start cache), S6 FFI in-process
+  (ctypes, vincoli GIL/thread). Matrice di decisione iniziale per scegliere
+  lo scenario + tabella riepilogo + checklist produzione comune.
+- `index.md` aggiornato (riga concept + ordine di lettura 4b).
+- Regola di coerenza rispettata: ogni scenario cambia SOLO protocollo
+  opaco e logica handler; la sandbox resta identica (fuel/memory/timeout/
+  budget `ask`).
+
 ## 2026-10-10 — estensioni v0.7 implementate (M1 + scenari D/E/F)
 
 - Richiesta utente: eseguire il piano `docs/extension-plan.md` nell'ordine

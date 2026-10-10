@@ -21,6 +21,7 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | [ROADMAP.md](ROADMAP.md) | Specification | Dove siamo, prossimi passi, cronologia completa, trappole note, contesto per il prossimo agente |
 | [github-advanced-security.md](github-advanced-security.md) | Reference | Stato CodeQL / secret scanning / Dependabot, procedure di verifica e abilitazione |
 | [extension-plan.md](extension-plan.md) | Specification | Piano v0.7: M1 fuel-only, scenario D (HTTP), E (FFI/C-ABI), F (tool LLM via OpenRouter) — spec, ABI, prove |
+| [scenarios.md](scenarios.md) | Guide | Scenari d'integrazione via `ask`: 6 ricette complete (FastAPI ask-proxy, gRPC bridge, LLM tool-bus, CLI/subprocess, serverless, FFI in-process) con architettura, codice, limiti e checklist per ciascuno |
 
 ## Fuori da `docs/` ma parte del bundle
 
@@ -49,5 +50,8 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 4. [integration.md](integration.md) → per chi deve integrare wasmbox in un
    sistema applicativo o usarla da agente AI (quali vie, come, a quali
    condizioni).
+4b. [scenarios.md](scenarios.md) → ricette concrete per i casi d'uso più
+   diffusi (FastAPI, gRPC, agenti LLM, serverless, FFI…): una volta scelta
+   la via con integration.md, qui c'è il passo-passo.
 5. [github-advanced-security.md](github-advanced-security.md) → solo se si
    lavora su CI/sicurezza.
