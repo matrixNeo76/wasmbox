@@ -1,0 +1,10 @@
+(module
+  (memory (export "memory") 1)
+  (func (export "guest_alloc") (param i32) (result i32)
+    (if (i32.eqz (local.get 0)) (then (return (i32.const 1024))))
+    (i32.const 1024))
+  (func (export "guest_free") (param i32 i32))
+  (func (export "guest_run") (param i32 i32) (result i64)
+    (loop $forever (br $forever))
+    (i64.const 0))
+)

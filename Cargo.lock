@@ -3652,6 +3652,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "scenario-tool-guest"
+version = "0.1.0"
+
+[[package]]
+name = "scenario-tool-handler"
+version = "0.1.0"
+dependencies = [
+ "wasmbox-core",
+]
+
+[[package]]
 name = "scoped-tls-hkt"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4872,6 +4883,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7b4d1a49ea73a8f3326e74e3a05db667001b16bd1035ed3356fc1a0ed05ca7f"
 dependencies = [
  "wast",
+]
+
+[[package]]
+name = "wat-compile-scenarios"
+version = "0.1.0"
+dependencies = [
+ "wat",
 ]
 
 [[package]]

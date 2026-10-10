@@ -8,6 +8,27 @@ updated: "2026-10-10"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-10 — 3 scenari eseguibili (integration.md portati in pratica)
+
+- Richiesta utente: creare gli esempi dei 3 scenari della guida.
+- **Scenario A** (`examples/scenario-cli-pipeline` + `scripts/scenarios/scenario-a.sh`):
+  pipeline di fiducia — 4 case (normale/vuoto/100KB/non-UTF8) via
+  `wasmbox-cli --json`, verdetto TRUST/REJECT, registro per SHA-256.
+  Testato: TRUST + registrazione.
+- **Scenario B** (`examples/scenario-tool-handler` con `guest/` dedicato):
+  protocollo `tool:<nome>:<arg>` → `tool_result:…` con `HostHandler` reale,
+  metriche post-run, errore host → exit 7. Testato: soma=42, reverse, len,
+  boom→exit 7.
+- **Scenario C** (`examples/scenario-hostile-guest` + runner): 3 bombe WAT
+  (fuel/oom/ask-flood) compilate via `crates/wat-compile-scenarios` (crate
+  `wat`, dev-dep già autorizzata). Testato 4 volte: fuel→exit 3 o 4
+  (non deterministico: entrambi limiti validi, il runner li accetta),
+  OOM→5, ask-flood→6. Zero crash.
+- `docs/integration.md` §5 "Scenari provabili", `index.md` aggiornati;
+  baseline completa verde (check/test 22/22/clippy/fmt).
+- Workspace: 2 nuovi membri (scenario-tool-handler + guest,
+  wat-compile-scenarios).
+
 ## 2026-10-10 — nuova guida d'integrazione (docs/integration.md)
 
 - Richiesta utente: documento approfondito su come implementare wasmbox in

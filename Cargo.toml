@@ -1,6 +1,15 @@
 [workspace]
 resolver = "2"
-members = ["crates/wasmbox-core", "examples/guest-echo", "examples/host-run", "crates/wasmbox-cli", "crates/wasmbox-ui"]
+members = [
+  "crates/wasmbox-core",
+  "crates/wasmbox-cli",
+  "crates/wasmbox-ui",
+  "examples/guest-echo",
+  "examples/host-run",
+  "crates/wat-compile-scenarios",
+  "examples/scenario-tool-handler",
+  "examples/scenario-tool-handler/guest",
+]
 
 [workspace.package]
 edition = "2021"

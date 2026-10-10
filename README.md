@@ -37,6 +37,9 @@ né la richiesta né la risposta di `ask` — sono bytes opachi.
 ├── skills/wasmbox/SKILL.md  # skill per agenti AI: come usare la CLI
 ├── examples/guest-echo/     # guest Wasm di esempio (wasm32-unknown-unknown)
 ├── examples/host-run/       # esempio lato host: carica un guest, passa un handler
+├── examples/scenario-cli-pipeline/  # scenario A: pipeline fiducia via CLI
+├── examples/scenario-tool-handler/  # scenario B: handler tool via libreria
+├── examples/scenario-hostile-guest/ # scenario C: bombe ostili (i limiti in azione)
 ├── docs/blueprint.md        # specifica completa di progetto
 ├── docs/github-advanced-security.md
 └── scripts/                 # install / build / preview / verifica
@@ -172,6 +175,18 @@ cd wasmbox-v0.5.1-x86_64-unknown-linux-gnu
 Su macOS: come linux ma le release portano `aarch64-apple-darwin` (Apple
 Silicon) e `x86_64-apple-darwin` (Intel). Su Windows: pacchetto `.zip` con
 `wasmbox-cli.exe`/`wasmbox-ui.exe` (`Expand-Archive`), target `x86_64-pc-windows-msvc`.
+
+## Scenari di integrazione (esempi provabili)
+
+Tre scenari eseguibili dimostrano [la guida d'integrazione](docs/integration.md):
+
+```sh
+sh scripts/scenarios/scenario-a.sh        # A: un agente decide TRUST/REJECT da exit+JSON
+sh scripts/scenarios/build-scenarios.sh   # compila guest+B e bombe C
+cargo run -p scenario-tool-handler -- \
+  target/scenario-hostile/scenario_tool_guest.wasm "soma:7x35"   # B: tool_result:soma=42
+sh scripts/scenarios/scenario-c.sh        # C: fuel/OOM/ask-limit → errore tipizzato, mai crash
+```
 
 ## Pubblicazione su crates.io
 

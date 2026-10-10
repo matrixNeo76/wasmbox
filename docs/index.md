@@ -17,7 +17,7 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | File | `type` | Contenuto |
 |---|---|---|
 | [blueprint.md](blueprint.md) | Specification | Spec vincolante: obiettivo, ABI, limiti, divieti, interfacce di fruizione (v0.6 con matrice release 4 target), test, validazione |
-| [integration.md](integration.md) | Guide | Guida all'integrazione: tre vie d'uso (CLI per agenti, libreria per applicativi Rust, estensioni future), SandboxConfig campo per campo, mappa errori, protocollo su `ask`, authoring guest, checklist |
+| [integration.md](integration.md) | Guide | Guida all'integrazione: tre vie d'uso (CLI per agenti, libreria per applicativi Rust, estensioni future), SandboxConfig campo per campo, mappa errori, protocollo su `ask`, authoring guest, 3 scenari provabili, checklist |
 | [ROADMAP.md](ROADMAP.md) | Specification | Dove siamo, prossimi passi, cronologia completa, trappole note, contesto per il prossimo agente |
 | [github-advanced-security.md](github-advanced-security.md) | Reference | Stato CodeQL / secret scanning / Dependabot, procedure di verifica e abilitazione |
 
@@ -32,6 +32,10 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | [`../crates/wasmbox-ui/`](../crates/wasmbox-ui/) | UI minimale Slint con screenshot BMP headless |
 | [`../.github/workflows/ci.yml`](../.github/workflows/ci.yml) | CI baseline (check/test/clippy/fmt/guest) |
 | [`../.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) | CodeQL build-mode none |
+| [`../examples/scenario-cli-pipeline/`](../examples/scenario-cli-pipeline/) | Scenario A: pipeline fiducia via CLI |
+| [`../examples/scenario-tool-handler/`](../examples/scenario-tool-handler/) | Scenario B: handler tool via libreria |
+| [`../examples/scenario-hostile-guest/`](../examples/scenario-hostile-guest/) | Scenario C: bombe ostili (limiti) |
+| [`../scripts/scenarios/`](../scripts/scenarios/) | runner + build degli scenari |
 | [`../scripts/`](../scripts/) | install / build / preview (con demo CLI+UI) / ghas-status |
 
 ## Ordine di lettura consigliato (per un nuovo agente)

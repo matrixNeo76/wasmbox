@@ -233,7 +233,21 @@ serve, le direzioni:
 - **FFI/C-ABI** per altre lingue nativamente: stesso criterio — crate ad hoc
   sopra `wasmbox-core`, mai dentro.
 
-## 5) Checklist di integrazione (prima di dichiarare finito)
+## 5) Scenari provabili: i tre esempi pronti (examples/)
+
+Tre esempi eseguibili dimostrano le vie 1 e 2 con prove reali; a ciascuno
+rimandano anche i link in [index](index.md) e i grafi/preview:
+
+| Scenario | Via | Cartella | Comando | Dimonstra |
+|---|---|---|---|---|
+| A — pipeline editoriale | 1 (CLI) | [examples/scenario-cli-pipeline](../examples/scenario-cli-pipeline/README.md) | `sh scripts/scenarios/scenario-a.sh` | un agente decide TRUST/REJECT da exit + `--json`, input ostile invertito, registro per SHA-256 |
+| B — handler tool | 2 (libreria) | [examples/scenario-tool-handler](../examples/scenario-tool-handler/README.md) | `sh scripts/scenarios/build-scenarios.sh` + `cargo run -p scenario-tool-handler -- <guest.wasm> "soma:7x35"` | `HostHandler` con protocollo `tool:<nome>:<arg>` → `tool_result:…`, metriche post-run, errore host → exit 7 |
+| C — guest ostili | 1 (CLI) | [examples/scenario-hostile-guest](../examples/scenario-hostile-guest/README.md) | `sh scripts/scenarios/scenario-c.sh` | fuel/timeout (3 o 4), OOM (5), ask-limit (6): i limiti scattano con l'errore tipizzato, mai crash |
+
+Companion dello scenario C: `crates/wat-compile-scenarios` — compila i WAT via
+crate `wat` (dev-dep autorizzata), così gli scenari non richiedono wabt esterno.
+
+## 6) Checklist di integrazione (prima di dichiarare finito)
 
 - [ ] Guest conforme all'ABI: `ok:true` con input normale, errore tipizzato
       `ok:false` con input malformato (mai crash del processo).
