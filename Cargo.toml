@@ -7,8 +7,11 @@ members = [
   "examples/guest-echo",
   "examples/host-run",
   "crates/wat-compile-scenarios",
+  "crates/wasmbox-http",
+  "crates/wasmbox-ffi",
   "examples/scenario-tool-handler",
   "examples/scenario-tool-handler/guest",
+  "examples/scenario-limit-runner",
 ]
 
 [workspace.package]

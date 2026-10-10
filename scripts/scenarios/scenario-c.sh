@@ -55,9 +55,26 @@ case_run() {  # NAME EXPECT_EXIT EXPECT_ERROR INPUT("")
   fi
 }
 
-# --- fuel bomb: loop infinito → exit 3 (fuel) oppure 4 (timeout):
-#     limite attivo in entrambi i casi (risposta valida, vedasi funzione sopra)
+# --- fuel bomb: due run—
+#   (a) engine default via CLI: exit 3 (fuel) oppure 4 (timeout), il primo
+#       limite che vince (vedasi case_run_fuel sopra)
+#   (b) engine fuel-only via scenario-limit-runner (M1,
+#       docs/extension-plan.md §1): timeout disattivato → exit 3 DETERMINISTICO
 case_run_fuel fuel-bomb
+printf 'case fuel-bomb-fuel-only: '
+LIMIT_RUNNER="target/debug/scenario-limit-runner"
+if [ -x "$LIMIT_RUNNER" ]; then
+  "$LIMIT_RUNNER" "$OUT/fuel-bomb.wasm" >/dev/null 2>&1
+  code=$?
+  if [ "$code" -eq 3 ]; then
+    echo "PASS (exit=3, fuel-only deterministico — M1)"
+  else
+    echo "FAIL (exit=$code atteso=3 con config fuel-only)"
+    FAILS="$FAILS fuel-bomb-fuel-only"
+  fi
+else
+  echo "SKIP (compila prima: cargo build -p scenario-limit-runner)"
+fi
 
 # --- oom bomb: input 20 MiB via stdin → GuestOutOfMemory, exit 5 ---
 head -c 20971520 /dev/zero | tr '\0' 'x' > "$OUT/oom-input.bin"

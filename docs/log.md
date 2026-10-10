@@ -8,6 +8,38 @@ updated: "2026-10-10"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-10 — estensioni v0.7 implementate (M1 + scenari D/E/F)
+
+- Richiesta utente: eseguire il piano `docs/extension-plan.md` nell'ordine
+  indicato ("tutto ok").
+- **M1** (`examples/scenario-limit-runner`): run fuel-only deterministica
+  (timeout disattivato) — fuel-bomb → **exit 3 su 3 run consecutive**;
+  `scenario-c.sh` aggiornato con case `fuel-bomb-fuel-only` (4/4 PASS).
+- **Scenario D** (`crates/wasmbox-http`): endpoint HTTP std (`TcpListener`,
+  thread per connessione, JSON+base64 scritti a mano, zerodipendenze oltre
+  al core). Rotta unica `POST /run` + `GET /healthz`; errori sandbox con lo
+  STESSO vocabolario della CLI. 10/10 unit test; `scenario-d.sh` 4/4 PASS
+  (echo 200, bad_request 400, invalid_wasm, fuel deterministico via
+  `limits.max_fuel` + `epoch_timeout_ms:null`). Trappola C efixata:
+  `base64::decode` con filtro silenzioso accettava bytes estranei →
+  riscritto con validazione esplicita; json numeri negativi via u128.
+- **Scenario E** (`crates/wasmbox-ffi`): C-ABI stabile
+  (`cdylib+staticlib`, zero dipendenze): `new/free/run/buffer_free/`
+  `last_error(_code)`; status 0/1/2/3 + exit code stile CLI. 3/3 test Rust
+  (round-trip echo reale via guest wasm32 compilato, argomenti illegali →
+  status 1, wasm invalido → NULL). `scenario-e.sh` via python3 **stdlib**
+  (ctypes): 5/5 PASS — prova che un host non-Rust può usare wasmbox.
+- **Scenario F** (feature `llm` opt-in su `scenario-tool-handler`, `ureq`
+  optional con solo `rustls`): tool `llm:<prompt>` via OpenRouter; la rete
+  sta SOLO nell'host handler; senza `OPENROUTER_API_KEY` → exit 7 tipizzato
+  (`scenario-f.sh` PASS offline; chiamata reale SKIP finché chiave assente).
+- Docs: `integration.md` §4 riscritta (HTTP/FFI/LLM **fatti**, con prove),
+  tabella scenari D/E/F, `index.md` (extension-plan + nuovi crate), questo
+  log; ROADMAP aggiornata.
+- Divieti rispettati: niente serde/serde_json (JSON a mano in HTTP e LLM),
+  un solo nuovo meccanismo di rete (host handler, opt-in), FFI senza
+  thread e senza puntatori guest uscenti dal crate.
+
 ## 2026-10-10 — 3 scenari eseguibili (integration.md portati in pratica)
 
 - Richiesta utente: creare gli esempi dei 3 scenari della guida.

@@ -20,6 +20,7 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | [integration.md](integration.md) | Guide | Guida all'integrazione: tre vie d'uso (CLI per agenti, libreria per applicativi Rust, estensioni future), SandboxConfig campo per campo, mappa errori, protocollo su `ask`, authoring guest, 3 scenari provabili, checklist |
 | [ROADMAP.md](ROADMAP.md) | Specification | Dove siamo, prossimi passi, cronologia completa, trappole note, contesto per il prossimo agente |
 | [github-advanced-security.md](github-advanced-security.md) | Reference | Stato CodeQL / secret scanning / Dependabot, procedure di verifica e abilitazione |
+| [extension-plan.md](extension-plan.md) | Specification | Piano v0.7: M1 fuel-only, scenario D (HTTP), E (FFI/C-ABI), F (tool LLM via OpenRouter) — spec, ABI, prove |
 
 ## Fuori da `docs/` ma parte del bundle
 
@@ -35,6 +36,8 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | [`../examples/scenario-cli-pipeline/`](../examples/scenario-cli-pipeline/) | Scenario A: pipeline fiducia via CLI |
 | [`../examples/scenario-tool-handler/`](../examples/scenario-tool-handler/) | Scenario B: handler tool via libreria |
 | [`../examples/scenario-hostile-guest/`](../examples/scenario-hostile-guest/) | Scenario C: bombe ostili (limiti) |
+| [`../crates/wasmbox-http/`](../crates/wasmbox-http/) | Scenario D: endpoint HTTP `POST /run` (orchestrazione remota) |
+| [`../crates/wasmbox-ffi/`](../crates/wasmbox-ffi/) | Scenario E: C-ABI stabile (cdylib/staticlib) per host non-Rust |
 | [`../scripts/scenarios/`](../scripts/scenarios/) | runner + build degli scenari |
 | [`../scripts/`](../scripts/) | install / build / preview (con demo CLI+UI) / ghas-status |
 

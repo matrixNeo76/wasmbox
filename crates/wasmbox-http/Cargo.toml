@@ -1,0 +1,13 @@
+[package]
+name = "wasmbox-http"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Endpoint HTTP minimale per orchestrazione remota (scenario D): unica rotta POST /run sopra wasmbox-core, server std (TcpListener), JSON scritto a mano."
+
+[dependencies]
+wasmbox-core = { path = "../wasmbox-core" }
+
+[[bin]]
+name = "wasmbox-http"
+path = "src/main.rs"

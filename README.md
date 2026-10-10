@@ -139,15 +139,25 @@ già presenti nel workspace (introdotte il 2026-10-09):
 - **`crates/wasmbox-ui`** — UI minimale Slint con screenshot BMP headless;
 - **`skills/wasmbox/SKILL.md`** — contratto per agenti AI.
 
-**Resta fuori** (estensioni possibili, nessuna avviata — decisione aperta,
-vedi `docs/ROADMAP.md` §2.9):
+**Estensioni v0.7 (verificate 2026-10-10, spec in `docs/extension-plan.md`)**:
 
-- **endpoint HTTP/gRPC** per l'uso da agenti AI esterni senza processo CLI;
-- FFI/C-ABI per altri linguaggi.
+- **`crates/wasmbox-http`** — endpoint HTTP per orchestratori remoti:
+  `wasmbox-http [--bind 127.0.0.1:8130]`, rotta unica `POST /run`
+  (guest+input base64, limiti di risorsa per-request) + `GET /healthz`;
+  server std, zero dipendenze oltre al core, JSON/base64 scritti a mano.
+  Prova: `sh scripts/scenarios/scenario-d.sh` (4/4 PASS).
+- **`crates/wasmbox-ffi`** — C-ABI stabile per Python/Node/Go/Android/iOS
+  (`cdylib+staticlib`): engine new/free/run + `wasmbox_buffer_free` +
+  `last_error(_code)` con exit code stile CLI. Prova con python3 stdlib:
+  `sh scripts/scenarios/scenario-e.sh` (5/5 PASS).
+- **Tool LLM reale** (scenario F, feature opt-in `llm` su
+  `examples/scenario-tool-handler`, `ureq`): `llm:<prompt>` via OpenRouter —
+  la rete sta SOLO nell'host handler; senza `OPENROUTER_API_KEY` → exit 7
+  tipizzato. Prova offline: `sh scripts/scenarios/scenario-f.sh`.
 
-La scelta è deliberata: il blueprint vieta logica di dominio nel crate `core`,
-e un protocollo di interfaccia È logica di dominio — sta in un crate separato
-sopra `wasmbox-core` (CLI e UI seguono già questa regola).
+La regola resta: il blueprint vieta logica di dominio e I/O nel crate `core` —
+tutto sta in crate separati sopra `wasmbox-core` (CLI, UI, http e FFI
+seguono già questa regola).
 
 ## Release GitHub (binari scaricabili)
 
@@ -186,6 +196,9 @@ sh scripts/scenarios/build-scenarios.sh   # compila guest+B e bombe C
 cargo run -p scenario-tool-handler -- \
   target/scenario-hostile/scenario_tool_guest.wasm "soma:7x35"   # B: tool_result:soma=42
 sh scripts/scenarios/scenario-c.sh        # C: fuel/OOM/ask-limit → errore tipizzato, mai crash
+sh scripts/scenarios/scenario-d.sh        # D: POST /run via HTTP — echo, 400, invalid_wasm, fuel deterministico
+sh scripts/scenarios/scenario-e.sh        # E: FFI via python3 ctypes — engine new/run/free senza dipendenze
+sh scripts/scenarios/scenario-f.sh        # F: tool llm senza chiave → exit 7 tipizzato (SKIP online senza OPENROUTER_API_KEY)
 ```
 
 ## Pubblicazione su crates.io

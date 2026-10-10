@@ -17,13 +17,134 @@
 //!   target/wasm32-unknown-unknown/release/scenario_tool_guest.wasm "soma:7x35"
 //! cargo run -p scenario-tool-handler -- \
 //!   target/wasm32-unknown-unknown/release/scenario_tool_guest.wasm "reverse:ciao"
+//! Use (dalla root, dopo `sh scripts/scenarios/build-scenarios.sh`):
+//! ```sh
+//! cargo run -p scenario-tool-handler -- \
+//!   target/wasm32-unknown-unknown/release/scenario_tool_guest.wasm "soma:7x35"
+//! cargo run -p scenario-tool-handler -- \
+//!   target/wasm32-unknown-unknown/release/scenario_tool_guest.wasm "reverse:ciao"
 //! cargo run -p scenario-tool-handler -- \
 //!   target/wasm32-unknown-unknown/release/scenario_tool_guest.wasm "boom!"
 //! ```
+//!
+//! Feature `llm` (scenario F, docs/extension-plan.md §4): aggiunge il tool
+//! `llm:<prompt>` — la chiamata di RETE sta interamente nell'host handler,
+//! mai nella sandbox. Richiede `OPENROUTER_API_KEY` nell'ambiente del
+//! PROCESSO HOST (lettura solo lato host, mai nel guest). Limiti a difesa:
+//! prompt capito a 8 KiB, timeout 30 s, retry 0, modello free-tier
+//! default. Nessuna chiave nella risposta o nel guest.
 
 use wasmbox_core::{HostError, HostHandler, SandboxConfig, SandboxEngine, SandboxError};
 
 const MAX_ASK_CALLS: u32 = 16;
+
+// --- Scenario F: costanti del tool llm (feature "llm") ---
+#[cfg(feature = "llm")]
+mod llm_tool {
+    use super::HostError;
+
+    const MAX_PROMPT_BYTES: usize = 8 * 1024;
+    const TIMEOUT_SECS: u64 = 30;
+    const MODEL_FREE: &str = "openrouter/auto:free";
+
+    /// Tool `llm:<prompt>`: una singola chiamata OpenRouter.
+    ///
+    /// Mappature errori → HostError::Custom("llm:<http>:\ <msg>"):
+    /// chiave mancante, prompt vuoto/troppo grande, timeout HTTP, provider.
+    pub fn call_llm(prompt: &str) -> Result<String, HostError> {
+        // API key: SOLO dall'ambiente del processo host (mai nella sandbox).
+        let api_key = std::env::var("OPENROUTER_API_KEY").map_err(|_| {
+            HostError::Custom("llm:0: OPENROUTER_API_KEY non impostata nel processo host".into())
+        })?;
+        if prompt.is_empty() || prompt.len() > MAX_PROMPT_BYTES {
+            return Err(HostError::Custom(format!(
+                "llm:0: prompt vuoto o > {MAX_PROMPT_BYTES} byte"
+            )));
+        }
+
+        // Il workspace VIETA serde/serde_json: costruiamo la richiesta a mano.
+        let body = format!(
+            "{{\"model\":\"{MODEL_FREE}\",\"messages\":[{{\"role\":\"user\",\"content\":{}}}]}}",
+            json_escape(prompt)
+        );
+        let agent = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(TIMEOUT_SECS)))
+            .build()
+            .new_agent();
+        let mut resp = agent
+            .post("https://openrouter.ai/api/v1/chat/completions")
+            .header("Authorization", &format!("Bearer {api_key}"))
+            .header("Content-Type", "application/json")
+            .send(&body)
+            .map_err(|e| HostError::Custom(format!("llm:0: http {e}")))?;
+
+        // OpenRouter: testo in choices[0].message.content; errori lato body.
+        let status = resp.status().as_u16();
+        let text = resp
+            .body_mut()
+            .read_to_string()
+            .map_err(|e| HostError::Custom(format!("llm:{status}: body read: {e}")))?;
+        if status != 200 {
+            return Err(HostError::Custom(format!("llm:{status}: {text}")));
+        }
+        // Estrazione minimal a mano di choices[0].message.content
+        // (protocollo del piano; saranno semplificate, per casi negativi
+        // usa da estrattore).
+        let content = extract_content(&text).ok_or_else(|| {
+            HostError::Custom(format!("llm:{status}: risposta json senza content"))
+        })?;
+        Ok(format!("tool_result:llm={content}"))
+    }
+
+    fn json_escape(s: &str) -> String {
+        let mut out = String::with_capacity(s.len() + 2);
+        out.push('"');
+        for c in s.chars() {
+            match c {
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\n' => out.push_str("\\n"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+                c => out.push(c),
+            }
+        }
+        out.push('"');
+        out
+    }
+
+    /// Estrattore minimale di `choices[0].message.content` (stringa scappata)
+    /// senza serde: cerca `"content":"` e copia fino alla `"` non scappata.
+    fn extract_content(body: &str) -> Option<String> {
+        let target = "\"content\":\"";
+        let i = body.find(target)? + target.len();
+        let rest = &body[i..];
+        let mut out = String::new();
+        let mut chars = rest.chars();
+        while let Some(c) = chars.next() {
+            match c {
+                '"' => return Some(out),
+                '\\' => match chars.next()? {
+                    'n' => out.push('\n'),
+                    't' => out.push('\t'),
+                    'r' => out.push('\r'),
+                    '"' => out.push('"'),
+                    '\\' => out.push('\\'),
+                    '/' => out.push('/'),
+                    'u' => {
+                        let hex: String = chars.by_ref().take(4).collect();
+                        let cp = u32::from_str_radix(&hex, 16).ok()?;
+                        out.push(char::from_u32(cp).unwrap_or('\u{FFFD}'));
+                    }
+                    other => out.push(other),
+                },
+                other => out.push(other),
+            }
+        }
+        None
+    }
+}
 
 struct ToolHandler {
     calls: u32,
@@ -71,6 +192,8 @@ impl HostHandler for ToolHandler {
                 arg.chars().rev().collect::<String>()
             ),
             "len" => format!("tool_result:len={}", arg.chars().count()),
+            #[cfg(feature = "llm")]
+            "llm" => llm_tool::call_llm(arg)?,
             // Ogni risposta seguita dal TWO precedente: mantieni keyed protocol.
             _ => return Err(HostError::Custom(format!("tool sconosciuto: {name}"))),
         };

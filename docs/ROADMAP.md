@@ -111,6 +111,39 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
    minori: verifica d'uso binaria su mac/win richiede le rispettive macchine
    (gli asset sono lì per chi le possiede); il workflow mac/win è stato
    comunque verificato end-to-end in CI (build + smoke CLI+UI + upload).
+   **ESTENSIONI v0.7 — ESEQUIATE E VERIFICATE (2026-10-10, piano
+   `extension-plan.md` approvato dall'utente, "tutto ok")**: tutte e 4 le
+   voci del piano sono implementate con prove reali:
+   - **M1 — run fuel-only deterministica**: nuovo membro workspace
+     `examples/scenario-limit-runner` (timeout disattivato, fuel ridotto);
+     fuel-bomb → exit **3 deterministico su 3 run consecutive**,
+     `scenario-c.sh` ora ha il case `fuel-bomb-fuel-only` (suite C 4/4 PASS).
+   - **Scenario D — HTTP** (`crates/wasmbox-http`, membro workspace): server
+     std, rotta unica `POST /run` + `GET /healthz`, JSON/base64 scritti a
+     mano (zero dipendenze oltre al core); `limits.max_fuel`/
+     `epoch_timeout_ms`/`max_ask_*` viaggiano nella request. 10/10 unit
+     test; `scenario-d.sh` **4/4 PASS** (echo 200, bad_request 400,
+     invalid_wasm, **fuel deterministico** via limits). Trappole fixate in
+     sessione: `base64::decode` col filtro silenzioso accettava caratteri
+     estranei → validazione esplicita; numeri negativi JSON via u128.
+   - **Scenario E — FFI** (`crates/wasmbox-ffi`, membro workspace,
+     `cdylib+staticlib`): C-ABI `wasmbox_engine_new/free/run` +
+     `wasmbox_buffer_free` + `last_error(_code)`; status 0/1/2/3, exit code
+     stile CLI; niente thread nel crate, output copiato (mai puntatori
+     guest uscenti). 3/3 test Rust (round-trip sul guest wasm32 reale;
+     argomenti illegali → status 1; wasm invalido → NULL).
+     `scenario-e.sh` via **python3 stdlib (ctypes)**: **5/5 PASS** —
+     dimostrazione reale di un host non-Rust.
+   - **Scenario F — tool LLM** (feature opt-in `llm` su scenario-tool-handler,
+     `ureq 3.4` optional con solo `rustls`): tool `llm:<prompt>` via
+     OpenRouter; la rete sta SOLO nell'host handler; senza
+     `OPENROUTER_API_KEY` → `SandboxError::Host` → **exit 7 tipizzato**
+     (PASS; chiamata reale SKIP finché l'utente non imposta la chiave in
+     **Settings → Environment**). CI: `scenario-f.sh` offline-only è
+     deterministico.
+   - **Docs**: `integration.md` aggiornata (4 vie d'uso: CLI, libreria,
+     HTTP, FFI + sezione Estensioni FATTE con prove), `index.md`, `log.md`,
+     questo punto; baseline completa da rieseguire prima del push.
 1. ~~**Riconnessione GitHub / nuovo progetto**~~ ✅ **RISOLTO** (verificato
    2026-10-08): il progetto corrente è agganciato a `matrixNeo76/wasmbox`
    (git remote corretto) e `git`/`gh` funzionano con la credenzia GitHub App

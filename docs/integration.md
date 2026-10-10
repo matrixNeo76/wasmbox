@@ -19,11 +19,13 @@ updated: "2026-10-10"
 |---|---|---|---|
 | **Binaria — `wasmbox-cli`** | Agenti AI, script, pipeline | il guest (e nient'altro) | [SKILL.md](../skills/wasmbox/SKILL.md): exit 0–10 deterministici, `--json` |
 | **Libreria — `wasmbox-core`** | Applicativi Rust con dominio reale | un `HostHandler` + gestione `SandboxError` | questo documento |
-| **FFI / endpoint HTTP** | host non-Rust, orchestratori remoti | un crate ad hoc | **non avviati** (deliberato, vedi [ROADMAP §2.9](ROADMAP.md)) — sezione "Estensioni" sotto |
+| **HTTP — `wasmbox-http`** | orchestratori remoti (v0.7) | una POST JSON a `/run` | § 4.1 qui sotto |
+| **FFI — `wasmbox-ffi`** | host non-Rust (Python/Node/Go…) (v0.7) | ctypes via C-ABI stabile | § 4.2 qui sotto |
 
 Se non sai quale scegliere: **agenti → CLI** (zero Rust lato host);
 **applicativo Rust → libreria** (massimo controllo, overhead `ask` ~0.7 µs
-misurato nel [benchmark](../crates/wasmbox-core/benches/perf.rs)).
+misurato nel [benchmark](../crates/wasmbox-core/benches/perf.rs));
+**orchestratore remoto → HTTP**; **host non-Rust → FFI**.
 
 ## 1) Via binaria: la CLI per agenti AI
 
@@ -221,17 +223,80 @@ Validazione di un tuo guest in autonomia:
    atteso: errore tipizzato (exit 5/6/10), **mai** crash del processo
    `wasmbox-cli`.
 
-## 4) Estensioni (HTTP, FFI, host non-Rust)
+## 4) Estensioni FATTE in v0.7 (HTTP, FFI, tool LLM)
 
-**Non disponibile oggi, deliberatamente** — [ROADMAP §2.9](ROADMAP.md). Se ti
-serve, le direzioni:
+Le tre estensioni del piano [extension-plan](extension-plan.md) sono
+**implementate, testate e prove reali verti**: crate separati sopra
+`wasmbox-core`, mai dentro (rispetta i divieti del blueprint).
 
-- **host non-Rust, oggi**: usa la CLI come subprocess: JSON + exit
-  deterministici è un contratto già pensato per agenti in qualunque linguaggio;
-- **endpoint HTTP** per orchestratori remoti: richiede una tua decisione
-  esplicita; sarà un crate separato (il core resta libreria pura);
-- **FFI/C-ABI** per altre lingue nativamente: stesso criterio — crate ad hoc
-  sopra `wasmbox-core`, mai dentro.
+### 4.1 `wasmbox-http` — orchestrazione remota (scenario D)
+
+Server HTTP std (`TcpListener` + un thread per connessione, zero dipendenze
+oltre a `wasmbox-core`; JSON e base64 scritti a mano).
+
+```sh
+cargo build -p wasmbox-http --release
+wasmbox-http [--bind HOST:PORT]      # default 127.0.0.1:8130 (loopback)
+```
+
+Rotta unica `POST /run` + `GET /healthz`:
+
+```json
+POST /run {"guest":"<base64>","input":"<base64|null>","limits":{...}}
+→ 200 {"ok":true,"output":"<base64>","ask_calls":n}
+→ 200 {"ok":false,"error":"fuel_exhausted","exit_code":3}   // errori sandbox, come CLI
+→ 400 bad_request · 413 guest_too_large · 404 · 405
+```
+
+- `limits` accetta `max_fuel`, `epoch_timeout_ms` (0 = disattivato),
+  `max_memory_bytes`, `max_ask_calls` (0 = illimitato),
+  `max_ask_payload_bytes` (0 = illimitato): i limiti di risorsa viaggiano
+  con la request, senza rebuild.
+- Nessun TLS/auth in v0.7: esporre SOLO dietro reverse-proxy con auth;
+  bind di default loopback-only; `--bind 0.0.0.0` è un atto deliberato.
+- Prova: `sh scripts/scenarios/scenario-d.sh` — 4 case (echo ok, 400,
+  invalid_wasm, **fuel deterministico** via `limits.max_fuel`).
+
+### 4.2 `wasmbox-ffi` — C-ABI stabile per host non-Rust (scenario E)
+
+`crates/wasmbox-ffi` (`crate-type = ["cdylib","staticlib"]`, zero
+dipendenze oltre al core). L'output di ogni run è copiato in un buffer
+proprietario del crate, MAI puntatori alla memoria guest fuori dal crate;
+una engine NON è thread-safe; handler `ask` interno = eco (v0.7).
+
+```c
+wasmbox_engine_t *wasmbox_engine_new(const uint8_t *wasm, size_t len,
+                                     const wasmbox_limits_t *limits); // NULL→default
+void wasmbox_engine_free(wasmbox_engine_t *engine);
+wasmbox_status_t wasmbox_engine_run(engine, const uint8_t *input, size_t in_len,
+                                    uint8_t **out, size_t *out_len);
+void wasmbox_buffer_free(uint8_t *buf, size_t len);
+```
+
+`wasmbox_status_t`: 0 ok · 1 arg invalido · 2 init fallito · 3 run fallita;
+`wasmbox_last_error_code(engine)` restituisce il codice **stile CLI**
+(0/3/4/5/6/7/8/9/10); `wasmbox_last_error` → `char*` UTF-8 (copiare subito).
+
+Prova da Python **senza dipendenze** (`ctypes` stdlib):
+`sh scripts/scenarios/scenario-e.sh` — 5 case (echo round-trip + errori).
+
+### 4.3 Tool LLM reale (scenario F, feature `llm`)
+
+Sullo scenario B, tool `llm:<prompt>` via OpenRouter (`POST
+/api/v1/chat/completions`). La rete sta **interamente nell'host handler**
+(feature opt-in `llm` del crate scenario-tool-handler, dipendenza `ureq`
+optionale con solo `rustls`): la sandbox e `wasmbox-core` restano senza I/O.
+
+- Richiede `OPENROUTER_API_KEY` nell'env del **processo host** (mai nel
+  guest, mai nella risposta). Limiti: prompt ≤ 8 KiB, timeout HTTP 30 s,
+  retry 0, modello default `openrouter/auto:free`.
+- Senza chiave: `SandboxError::Host` → exit 7. Prova offline:
+  `sh scripts/scenarios/scenario-f.sh`.
+
+### Direzioni tradute in extension-plan (storia)
+
+Il piano ha sostituito la vecchia sezione "Non disponibile oggi"; i criteri
+restano: **crate ad hoc sopra `wasmbox-core`, mai dentro**.
 
 ## 5) Scenari provabili: i tre esempi pronti (examples/)
 
@@ -243,6 +308,9 @@ rimandano anche i link in [index](index.md) e i grafi/preview:
 | A — pipeline editoriale | 1 (CLI) | [examples/scenario-cli-pipeline](../examples/scenario-cli-pipeline/README.md) | `sh scripts/scenarios/scenario-a.sh` | un agente decide TRUST/REJECT da exit + `--json`, input ostile invertito, registro per SHA-256 |
 | B — handler tool | 2 (libreria) | [examples/scenario-tool-handler](../examples/scenario-tool-handler/README.md) | `sh scripts/scenarios/build-scenarios.sh` + `cargo run -p scenario-tool-handler -- <guest.wasm> "soma:7x35"` | `HostHandler` con protocollo `tool:<nome>:<arg>` → `tool_result:…`, metriche post-run, errore host → exit 7 |
 | C — guest ostili | 1 (CLI) | [examples/scenario-hostile-guest](../examples/scenario-hostile-guest/README.md) | `sh scripts/scenarios/scenario-c.sh` | fuel/timeout (3 o 4), OOM (5), ask-limit (6): i limiti scattano con l'errore tipizzato, mai crash |
+| D — orchestrazione remota | 4 (HTTP) | [`crates/wasmbox-http`](../crates/wasmbox-http/) | `sh scripts/scenarios/scenario-d.sh` | POST /run: echo ok (200), bad_request (400), invalid_wasm, fuel deterministico via `limits` |
+| E — FFI reale | 5 (FFI) | [`crates/wasmbox-ffi`](../crates/wasmbox-ffi/) | `sh scripts/scenarios/scenario-e.sh` | ctypes/stdlib: engine new+run+free, status 0/1, wasm invalido → NULL |
+| F — tool LLM | 2 (libreria, feature) | [`examples/scenario-tool-handler`](../examples/scenario-tool-handler/) | `sh scripts/scenarios/scenario-f.sh` | senza chiave → exit 7 tipizzato; con OPENROUTER_API_KEY → risposta reale |
 
 Companion dello scenario C: `crates/wat-compile-scenarios` — compila i WAT via
 crate `wat` (dev-dep autorizzata), così gli scenari non richiedono wabt esterno.
@@ -266,6 +334,7 @@ crate `wat` (dev-dep autorizzata), così gli scenari non richiedono wabt esterno
 ## Riferimenti
 
 - Spec vincolante: [blueprint.md](blueprint.md)
+- Piano estensioni v0.7: [extension-plan.md](extension-plan.md)
 - Contratto CLI per agenti: [SKILL.md](../skills/wasmbox/SKILL.md)
 - Esempio host: [`examples/host-run/src/main.rs`](../examples/host-run/src/main.rs)
 - Esempio guest: [`examples/guest-echo/src/lib.rs`](../examples/guest-echo/src/lib.rs)
