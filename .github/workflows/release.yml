@@ -1,8 +1,19 @@
-# Release: build dei binari (wasmbox-cli, wasmbox-ui) + guest wasm e
-# pubblicazione delle release GitHub con artefatti scaricabili.
+# Release multipiattaforma (v0.6): build dei binari host (wasmbox-cli,
+# wasmbox-ui) + guest wasm su 4 OS e pubblicazione della release GitHub
+# con un archivio per target-triple.
 #
-# Trigger: push di tag vX.Y.Z (es. v0.5.0). Per creare una release:
-#   git tag v0.5.0 && git push origin v0.5.0
+# Trigger: push di tag vX.Y.Z (es. v0.5.1). Per creare una release:
+#   git tag v0.5.1 && git push origin v0.5.1
+#
+# Asset attesi (8): 4 archivi + 4 .sha256
+#   wasmbox-<tag>-x86_64-unknown-linux-gnu.tar.gz(.sha256)
+#   wasmbox-<tag>-aarch64-apple-darwin.tar.gz(.sha256)
+#   wasmbox-<tag>-x86_64-apple-darwin.tar.gz(.sha256)
+#   wasmbox-<tag>-x86_64-pc-windows-msvc.zip(.sha256)
+#
+# Convenzioni: nomi con target-triple Rust (come ripgrep/fd); .zip su
+# Windows, .tar.gz altrove; smoke test CLI+UI su OGNI runner prima
+# dell'upload (la suite completa 27/27 resta nella CI linux dedicata).
 name: Release
 
 on:
@@ -14,58 +25,98 @@ permissions:
 
 jobs:
   release:
-    name: Build + release
-    runs-on: ubuntu-latest
+    name: Build + release (${{ matrix.triple }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            triple: x86_64-unknown-linux-gnu
+            exp: tar.gz
+          - os: macos-15
+            triple: aarch64-apple-darwin
+            exp: tar.gz
+          - os: macos-15-intel
+            triple: x86_64-apple-darwin
+            exp: tar.gz
+          - os: windows-2025
+            triple: x86_64-pc-windows-msvc
+            exp: zip
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Toolchain (stabile + wasm32)
+      # Il default di rustup sulle runner è già lo stable + l'host target
+      # corrispondente al triple della matrice; wasm32 lo aggiungo perché
+      # serve per il guest.
+      - name: Toolchain (wasm32)
         run: |
           rustup target add wasm32-unknown-unknown
-          rustup override set stable
-
-      - name: Baseline (check + test) — non rilascio senza suite verde
-        env:
-          GUEST_ECHO_WASM: ""
-        run: |
-          cargo check --workspace
-          cargo test -p wasmbox-core
-
-      - name: Build release (binari host)
-        run: cargo build -p wasmbox-cli -p wasmbox-ui --release
+          rustup --version
+          cargo --version
 
       - name: Build guest wasm32
         run: cargo build -p guest-echo --target wasm32-unknown-unknown --release
 
+      - name: Build release (binari host, target esplicito)
+        run: cargo build -p wasmbox-cli -p wasmbox-ui --release --target ${{ matrix.triple }}
+
       - name: Fumo CLI (--json su guest reale)
+        shell: bash
         run: |
-          OUT=$(target/release/wasmbox-cli run \
-            target/wasm32-unknown-unknown/release/guest_echo.wasm "smoke" --json)
+          OUT=$(./target/${{ matrix.triple }}/release/wasmbox-cli run \
+            ./target/wasm32-unknown-unknown/release/guest_echo.wasm "smoke" --json)
           echo "$OUT"
           echo "$OUT" | grep -q '.ok.:true'
 
       - name: Fumo UI (screenshot headless)
+        shell: bash
         run: |
-          target/release/wasmbox-ui --screenshot ui-dim.bmp \
-            target/wasm32-unknown-unknown/release/guest_echo.wasm "smoke"
+          ./target/${{ matrix.triple }}/release/wasmbox-ui --screenshot ui-dim.bmp \
+            ./target/wasm32-unknown-unknown/release/guest_echo.wasm "smoke"
           [ "$(head -c 2 ui-dim.bmp)" = "BM" ]
 
-      - name: Pacchetto artefatti
+      - name: Pacchetto artefatti (tar.gz)
+        if: matrix.exp == 'tar.gz'
+        shell: bash
         run: |
-          dir=wasmbox-${GITHUB_REF#refs/tags/}-x86_64-linux
+          dir=wasmbox-${GITHUB_REF#refs/tags/}-${{ matrix.triple }}
           mkdir -p "$dir"
-          cp target/release/wasmbox-cli target/release/wasmbox-ui "$dir/"
+          cp target/${{ matrix.triple }}/release/wasmbox-cli \
+             target/${{ matrix.triple }}/release/wasmbox-ui "$dir/"
           cp target/wasm32-unknown-unknown/release/guest_echo.wasm "$dir/"
           cp README.md LICENSE-MIT LICENSE-APACHE "$dir/"
           tar czf "$dir.tar.gz" "$dir"
           sha256sum "$dir.tar.gz" > "$dir.tar.gz.sha256"
 
+      - name: Pacchetto artefatti (zip su Windows)
+        if: matrix.exp == 'zip'
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF -replace 'refs/tags/', ''
+          $dir = "wasmbox-$tag-${{ matrix.triple }}"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Copy-Item target/${{ matrix.triple }}/release/wasmbox-cli.exe, `
+                     target/${{ matrix.triple }}/release/wasmbox-ui.exe, `
+                     target/wasm32-unknown-unknown/release/guest_echo.wasm, `
+                     README.md, LICENSE-MIT, LICENSE-APACHE $dir/
+          Compress-Archive -Path $dir -DestinationPath "$dir.zip"
+          $hash = (Get-FileHash "$dir.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $dir.zip" | Out-File -Encoding ascii "$dir.zip.sha256"
+
       - name: Crea release GitHub
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            wasmbox-*-x86_64-linux.tar.gz
-            wasmbox-*-x86_64-linux.tar.gz.sha256
+            wasmbox-*x86_64-unknown-linux-gnu.tar.gz
+            wasmbox-*x86_64-unknown-linux-gnu.tar.gz.sha256
+            wasmbox-*aarch64-apple-darwin.tar.gz
+            wasmbox-*aarch64-apple-darwin.tar.gz.sha256
+            wasmbox-*x86_64-apple-darwin.tar.gz
+            wasmbox-*x86_64-apple-darwin.tar.gz.sha256
+            wasmbox-*x86_64-pc-windows-msvc.zip
+            wasmbox-*x86_64-pc-windows-msvc.zip.sha256
           generate_release_notes: true

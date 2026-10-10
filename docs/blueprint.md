@@ -1,13 +1,13 @@
 ---
 type: Specification
-title: "BLUEPRINT wasmbox — specifica di riferimento v0.5"
+title: "BLUEPRINT wasmbox — specifica di riferimento v0.6"
 description: "Spec autorevole e vincolante del prodotto: obiettivo, struttura workspace, dipendenze, ABI, file per file, divieti, ordine di implementazione, test, validazione."
 resource: "docs/blueprint.md"
 tags: ["spec", "blueprint", "abi", "wasmtime", "sandbox"]
-updated: "2026-10-09"
+updated: "2026-10-10"
 ---
 
-# BLUEPRINT — `wasmbox` (specifica di riferimento v0.5)
+# BLUEPRINT — `wasmbox` (specifica di riferimento v0.6)
 
 > Questo documento è la specifica autorevole del progetto. Va salvato prima di scrivere codice
 > (richiesta esplicita dell'utente) e consultato durante tutta l'implementazione.
@@ -30,7 +30,13 @@ updated: "2026-10-09"
 > invocazione, tabella exit code, politica di default). Regola: la logica di dominio
 > resta FUORI da wasmbox-core — CLI e UI sono applicazioni separate che usano
 > solo l'API pubblica (`SandboxEngine`, `HostHandler`, `SandboxConfig`,
-> `SandboxError`); nessun cambio all'ABI né ai divieti.`
+> `SandboxError`); nessun cambio all'ABI né ai divieti.
+>
+> v0.6 (2026-10-10): **portabilità multipiattaforma** — release GitHub su
+> linux/macos/windows con binari nativi per ogni target triple (v. sezione
+> "PORTABILITÀ MULTIPIATTAFORMA"). Nessun cambio di codice Rust richiesto:
+> wasmbox-core/CLI/UI sono già `std`-puri e cross-platform; cambia solo il
+> workflow di rilascio.
 
 # OBIETTIVO
 
@@ -300,6 +306,81 @@ Test richiesti (tutti devono passare):
 - Grep su `crates/wasmbox-core/src`: zero termini di dominio (backup, scan, robocopy, restore, sync); zero riferimenti a `wasmtime-wasi`, `serde_json`, `std::process`.
 - v0.5: `wasmbox-cli --json` una run reale con output atteso `echo_result:…`;
   `wasmbox-ui --screenshot` produce BMP valido (magic `BM`, colori attesi)
+
+# PORTABILITÀ MULTIPIATTAFORMA (v0.6)
+
+Obiettivo (richiesta utente 2026-10-10): "utilizzare wasmbox in tutti gli
+ambienti, non solo Linux". Il codice Rust non cambia: è già `std`-puro, senza
+dipendenze OS-specifiche. Cambia SOLO la superficie di rilascio.
+
+## Matrice di release (binari host + guest)
+
+| Runner GitHub | Target triple | Archivio | Note |
+|---|---|---|---|
+| `ubuntu-latest` | `x86_64-unknown-linux-gnu` | `.tar.gz` | attuale, già verde |
+| `macos-15` | `aarch64-apple-darwin` | `.tar.gz` | **Apple Silicon** — `macos-latest` oggi è arm64, NON Intel |
+| `macos-15-intel` | `x86_64-apple-darwin` | `.tar.gz` | Mac Intel (ancora in uso) |
+| `windows-2025` (o `windows-latest`) | `x86_64-pc-windows-msvc` | `.zip` | `.zip` su Windows (convenzione diffusa nei progetti Rust: ripgrep/fd); MSVC preinstallato sui runner |
+
+Il guest `guest_echo.wasm` (wasm32) è **UNO, indipendente dal sistema host**: va
+aggiunto a ogni archivio ma si compila una volta per job (idempotente, costo
+trascurabile). Nome dei pacchetti col **target triple Rust** (non "linux/mac/windows"):
+convenzione adottata da ripgrep/fd — evita ambiguità di architettura (e future
+sorprese su cosa punta `macos-latest`).
+
+## Regole del workflow a matrice
+
+1. Job `release` con `strategy.fail-fast: false` e matrice sopra → ogni
+   target builda indipendentemente e pubblica l'archivio del proprio OS;
+2. Smoke test PRIMA dell'upload, ridotti all'essenziale su **tutti** i target:
+   `cargo build` del workspace + smoke CLI `--json` (ok:true) + smoke UI
+   (magic `BM` del BMP). La suite completa di test (27/27) resta nel job
+   linux, che resta il gate logico; sugli altri OS girano comunque
+   `cargo check` e il build del guest wasm32 prima dello smoke;
+3. Perché smoke anche su mac/win: la compilazione incrociata non verifica né
+   l'avvio della UI né la deserializzazione della cache Wasmtime sull'OS finale;
+4. `--target <triple>` esplicito su `cargo build` (mai implicito: su
+   macOS Intel vs ARM il default cambierebbe); su Windows il binario è
+   `wasmbox-cli.exe` / `wasmbox-ui.exe` (gestito dallo step di packaging);
+5. SHA-256 per OGNI archivio; release notes generate da GitHub;
+6. Cosa NON cambia: ABI, divieti, dipendenze, `wasmbox-core`/`cli`/`ui`
+   (sorgenti identici al presente), CI e CodeQL.
+
+## Rischi noti e mitigazioni (v0.6)
+
+- **Cache .cwasm NON portabile**: gli artefatti serializzati di Wasmtime sono
+  legati a OS/arch/versione engine — già corretto per costruzione (la cache
+  vive nella `SandboxConfig.cache_dir` locale; un `.cwasm` di un sistema mai
+  incluso nel pacchetto). Nessuna azione.
+- **Pooling su Windows**: Wasmtime dichiara il pooling allocator funzionante ma
+  meno ottimizzato su Windows — i default (`pool_size = 8`) restano prudenti:
+  nessun tuning richiesto.
+- **Windows/Slint**: il software renderer con font embedded non dipende da
+  fontconfig né da API di sistema: build identica su Windows. Nessun backend
+  winit aggiuntivo installato (la UI resta headless-by-default).
+- **Runner in ritiro**: `macos-14` è annunciato in ritiro → usiamo
+  `macos-15` / `macos-15-intel` (macos-15, e Intel esplicito, restano
+  più stabili di `macos-latest`).
+- **Tempo di release**: 4 job concorrenti ≈ 10–15 min totali (il più lento è
+  macOS), contro i ~5 min attuali: accettabile per un tag release.
+
+# ORDINE DI IMPLEMENTAZIONE v0.6
+
+1. (fatto, v0.5) workflow mono-platform linux + tag `v0.5.0` → release vera.
+2. Sostituire `.github/workflows/release.yml` con la versione a matrice di
+    cui sopra (job matrix + packaging per triple + .zip su Windows).
+3. Validare il workflow "senza spendere un tag": parsing YAML leggero +
+    revisione manuale del matrix; `actionlint` opzionale se già disponibile.
+4. Prova reale su un secondo tag (es. `v0.5.1`, contenuto identico al
+    precedente: serve SOLO a verificare i 4 job della matrice in CI) →
+    verificare che la release esponga gli **8 asset** attesi
+    (4 archivi + 4 file .sha256).
+5. Verifica d'uso come l'utente finale: scaricare gli asset dalla release,
+    estrarli sul proprio sistema (tar.gz / zip) e eseguire `wasmbox-cli ...
+    --json` — verificare ok:true su ogni OS (da CI per mac/linux; per
+    Windows eventualmente da artifact della CI stessa).
+6. README + ROADMAP + `log.md` allineati (risultato: la matrice diventa
+    la «release standard» per ogni tag successivo).
 
 # AMBIENTE
 

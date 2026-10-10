@@ -86,8 +86,21 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
    tag `vX.Y.Z` produce una release con `wasmbox-cli`, `wasmbox-ui`,
    `guest_echo.wasm` (tar.gz + SHA-256, linux x86_64, smoke test prima
    della pubblicazione). **La prima release si crea con**:
-   `git tag v0.5.0 && git push origin v0.5.0`. Residuo opzionale:
-   runner multipli per macOS/Windows in release.yml.
+   `git tag v0.5.0 && git push origin v0.5.0`.
+   **RESIDUO — PORTABILITÀ MULTIPIATTAFORMA (2026-10-10, approvato dall'utente:
+   "vogliamo wasmbox in TUTTI gli ambienti, non solo Linux")** — spec in
+   `docs/blueprint.md` §"PORTABILITÀ MULTIPIATTAFORMA (v0.6)": release.yml a
+   matrice 4 target → `ubuntu-latest` (x86_64-unknown-linux-gnu),
+   `macos-15` (aarch64-apple-darwin), `macos-15-intel`
+   (x86_64-apple-darwin), `windows-2025` (x86_64-pc-windows-msvc, .zip).
+   Nomi degli asset col target-triple (convenzione ripgrep/fd); smoke
+   CLI+UI su OGNI OS (la suite completa 27/27 resta nel job linux);
+   8 asset attesi per release (4 archivi + 4 .sha256); rischi analizzati
+   nel blueprint (cache .cwasm non portabile — sicura per costruzione;
+   pooling allocator su Windows meno ottimizzato — nessun tuning;
+   `macos-14` in ritiro → usare macos-15/15-intel). Codice Rust INVARIATO:
+   i crate sono std-puri, cambia solo la superficie di rilascio.
+   Implementazione: nuovo `release.yml` a matrice + tag di verifica `v0.5.1`.
 1. ~~**Riconnessione GitHub / nuovo progetto**~~ ✅ **RISOLTO** (verificato
    2026-10-08): il progetto corrente è agganciato a `matrixNeo76/wasmbox`
    (git remote corretto) e `git`/`gh` funzionano con la credenzia GitHub App

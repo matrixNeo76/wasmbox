@@ -148,27 +148,30 @@ sopra `wasmbox-core` (CLI e UI seguono già questa regola).
 
 ## Release GitHub (binari scaricabili)
 
-Ogni tag `vX.Y.Z` → release automatica con binari precompilati
-(linux x86_64): `wasmbox-cli`, `wasmbox-ui`, `guest_echo.wasm` + README,
-licenze, checksum SHA-256. Il workflow (`.github/workflows/release.yml`)
-esegue baseline e smoke test **prima** di pubblicare.
+Ogni tag `vX.Y.Z` → release automatica con binari precompilati per
+**quattro piattaforme** (v0.6): linux x86_64, macOS Apple Silicon e Intel,
+Windows x64 MSVC. Ogni pacchetto contiene `wasmbox-cli`, `wasmbox-ui`,
+`guest_echo.wasm` + README e licenze, con checksum SHA-256. Il workflow
+(`.github/workflows/release.yml`) esegue smoke test CLI+UI **su ogni
+sistema** prima di pubblicare.
 
 ```sh
-git tag v0.5.0
-git push origin v0.5.0   # build + release automatica
+git tag v0.5.1
+git push origin v0.5.1   # build + release automatica (4 piattaforme)
 ```
 
 I binari si usano così (nessun Rust richiesto):
 
 ```sh
-tar xzf wasmbox-v0.5.0-x86_64-linux.tar.gz
-cd wasmbox-v0.5.0-x86_64-linux
+tar xzf wasmbox-v0.5.1-x86_64-unknown-linux-gnu.tar.gz
+cd wasmbox-v0.5.1-x86_64-unknown-linux-gnu
 ./wasmbox-cli run guest_echo.wasm "ciao" --json
 ./wasmbox-ui --screenshot ui.bmp guest_echo.wasm "ciao"
 ```
 
-Nota: i binari sono **linux x86_64** — niente macOS/Windows per ora
-(serve aggiungere runner multipli in release.yml, tracciato nel ROADMAP).
+Su macOS: come linux ma le release portano `aarch64-apple-darwin` (Apple
+Silicon) e `x86_64-apple-darwin` (Intel). Su Windows: pacchetto `.zip` con
+`wasmbox-cli.exe`/`wasmbox-ui.exe` (`Expand-Archive`), target `x86_64-pc-windows-msvc`.
 
 ## Pubblicazione su crates.io
 

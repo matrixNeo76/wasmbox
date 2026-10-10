@@ -3,10 +3,24 @@ type: Log
 title: "log — aggiornamenti documentazione wasmbox"
 description: "Storia datata degli aggiornamenti del bundle di documentazione (solo eventi rilevanti per i documenti)."
 okf_version: "0.2"
-updated: "2026-10-09"
+updated: "2026-10-10"
 ---
 
 # Log — modifiche alla documentazione
+
+## 2026-10-10 — spec + piano per la portabilità multipiattaforma (v0.6)
+
+- Richiesta utente: usare wasmbox in TUTTI gli ambienti, non solo Linux.
+- `blueprint.md` → **v0.6**: nuova sezione "PORTABILITÀ MULTIPIATTAFORMA"
+  con la matrice di release (4 runner/target triple: linux-gnu,
+  aarch64-apple-darwin, x86_64-apple-darwin, x86_64-pc-windows-msvc), le
+  regole del workflow a matrice, i rischi documentati e l'ordine di
+  implementazione (incluso il tag di verifica `v0.5.1`).
+- Codice Rust dichiarato INVARIATO (std-puro): cambia solo la superficie di
+  rilascio (`.github/workflows/release.yml`, packaging `.tar.gz`/`.zip`,
+  nomi asset con target-triple).
+- ROADMAP §2.0 aggiornato: residuo "runner multipli" aggiornato con lo stato
+  della spec e del piano.
 
 ## 2026-10-09 — release GitHub con binari scaricabili
 
