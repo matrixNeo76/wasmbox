@@ -3,7 +3,7 @@ type: Collection
 title: "wasmbox — indice documentazione (OKF v0.2)"
 description: "Directory listing di docs/: ogni concept in formato Open Knowledge Format v0.2 (frontmatter YAML, campo type obbligatorio)."
 okf_version: "0.2"
-updated: "2026-10-09"
+updated: "2026-10-10"
 ---
 
 # Indice documentazione `docs/`
@@ -16,7 +16,7 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 
 | File | `type` | Contenuto |
 |---|---|---|
-| [blueprint.md](blueprint.md) | Specification | Spec vincolante: obiettivo, ABI, limiti, divieti, interfacce di fruizione (v0.5), test, validazione |
+| [blueprint.md](blueprint.md) | Specification | Spec vincolante: obiettivo, ABI, limiti, divieti, interfacce di fruizione (v0.6 con matrice release 4 target), test, validazione |
 | [ROADMAP.md](ROADMAP.md) | Specification | Dove siamo, prossimi passi, cronologia completa, trappole note, contesto per il prossimo agente |
 | [github-advanced-security.md](github-advanced-security.md) | Reference | Stato CodeQL / secret scanning / Dependabot, procedure di verifica e abilitazione |
 
