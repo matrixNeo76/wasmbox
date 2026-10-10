@@ -233,9 +233,9 @@ pub unsafe extern "C" fn wasmbox_buffer_free(buf: *mut u8, len: usize) {
     drop(Vec::from_raw_parts(buf, len, len));
 }
 
-/// run fallita. Indirizzo: allocato con `CString::into_raw` e NON MAI
-/// liberato — v0.7 fattoreleak, documentato/innocuo: un piccolo leak per
-/// errore; nessun leak su run riuscita.
+/// run fallita. Indirizzo: allocato con `CString::into_raw` e non liberato
+/// (v0.7): leak piccolo e documentato, 1 per errore; nessun leak su run
+/// riuscita.
 /// SAFETY: `engine` valido (creato da `wasmbox_engine_new`, NON
 /// già liberata) oppure NULL.
 #[no_mangle]

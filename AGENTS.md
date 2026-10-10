@@ -52,7 +52,7 @@ cargo build -p guest-echo --target wasm32-unknown-unknown --release
   - **Tool LLM** scenario F (feature `llm` opt-in, ureq): `llm:<prompt>` via
     OpenRouter, rete SOLO nell'host handler; senza
     `OPENROUTER_API_KEY` → exit 7 tipizzato. **Piano completo in
-    `docs/extension-plan.md` (MTUTO ESEEGITO 2026-10-10, vedi ROADMAP §2).**
+    `docs/extension-plan.md` (TUTTO ESEEGUITO 2026-10-10, vedi ROADMAP §2).**
 - **OKF v0.2**: la `docs/` è in formato Open Knowledge Format v0.2 (frontmatter
   YAML su ogni concept; `index.md` + `log.md` riservati).
 - **graphify / reactgraph**: DECISO di NON introdurli finché il repo resta
