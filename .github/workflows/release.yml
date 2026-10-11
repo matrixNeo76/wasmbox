@@ -66,9 +66,11 @@ jobs:
           cargo --version
 
       - name: Build guest wasm32
+        shell: bash
         run: cargo build -p guest-echo --target wasm32-unknown-unknown --release
 
       - name: Build release (binari host + cdylib, target esplicito)
+        shell: bash
         run: |
           cargo build -p wasmbox-cli -p wasmbox-ui -p wasmbox-http -p wasmbox-mcp -p wasmbox-ffi \
             --release --target ${{ matrix.triple }}
