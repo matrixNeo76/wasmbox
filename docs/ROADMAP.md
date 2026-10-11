@@ -150,6 +150,22 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
      7/7 test verdi). Core intatto; deps `wasmtime-wasi` SOLO nel crate
      wasi. Fuori scope v0.8: preopen file-read test, benchmark layer-on/off
      (v0.9), scenario G ancora in attesa.
+   - **Agent-loop v0.9 IMPLEMENTATO (2026-10-11)**: crate
+     `crates/wasmbox-mcp` — server MCP stdio persistente (spec MCP
+     `2026-07-28`) sopra il core, per host agentici senza shell
+     (Claude Desktop, Cursor, LangGraph, agenti custom). Spec
+     fact-checked in [`agent-loop-plan.md`](agent-loop-plan.md)
+     (Manus/Claude Code/Codex + protocolli A2A/SSE/ACP/AGNTCY: la via
+     primaria resta skills+CLI, MCP è il canale aggiuntivo desk-side).
+     Un solo tool `wasmbox_run` (guest base64), envelope JSON capato
+     (output 4 KiB default head+tail + `output_truncated`, message
+     256 B, campi in ordine fisso per KV-cache), motori caldi per hash
+     FNV, limiti sempre core-side (l'agente solo restrinje). **22/22
+     test** (i 6 step §3: initialize/tools-list/echo/fuel-bomb/
+     truncation/guard anti-bloat <120 byte) + smoke binario reale su
+     pipe OK. Core intatto (Invariante 0); dep dev `wat` solo in dev-dep.
+     Fuori scope v0.9 (dichiarato): MCP Streamable HTTP (remoto, già
+     coperto in parte da wasmbox-http), WASI nel tool MCP, snapshotting.
    - **Candidati proseguimenti (proposti, NON implementati — decisione
      utente aperta)**: la guida [`scenarios.md`](scenarios.md) documenta
      6 ricette d'integrazione via `ask`; la prima da

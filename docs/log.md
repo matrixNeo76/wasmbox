@@ -8,6 +8,36 @@ updated: "2026-10-11"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-11 — agent-loop v0.9 IMPLEMENTATO (crates/wasmbox-mcp)
+
+- Richiesta utente: spec approvata ("ok approvo lo spec ma puoi anche
+  prima di svolgere il lavoro committare") → spec committata in
+  anticipo (`216abc4`), poi implementazione.
+- **Crate `crates/wasmbox-mcp`** (lib + bin, membro workspace, dipendenze
+  solo wasmbox-core + `wat` in dev-dep):
+  - `protocol.rs`: JSON-RPC 2.0 subset a mano (array, bool, escape \u,
+    UTF-8 multibyte);
+  - `envelope.rs`: busta capata head+tail (safe UTF-8), ordine campi
+    fisso `ok,error,message,output,ask_calls,duration_ms,
+    output_truncated`, errori snake_case della CLI;
+  - `runner.rs`: motori caldi per hash FNV, override fuel/timeout solo
+    restrittivi con engine dedicato (usa comunque la cache .cwasm);
+  - `server.rs`: dispatch MCP 3 metodi (initialize / tools/list /
+    tools/call) + decoder base64, spec `2026-07-28`;
+  - `main.rs`: loop stdio sottile; stdout = SOLO protocollo, log su
+    stderr.
+- **Verifica**: 22/22 test verdi (11 unit: protocol/envelope/runner;
+  11 integrazione: i 6 step §3 + 4 edge). Smoke reale del binario su
+  pipe: initialize → protocolVersion 2026-07-28, notifica silente,
+  tools/list = 1 tool, exit 0.
+- Trappole sistemate (causa, non sintomo): include! incompatibile coi
+  doc comment esterni → struttura lib+bin; WAT fuel-bomb senza
+  `(i64.const 0)` dopo il loop falliva la validazione → riuso del guest
+  provato in `scenario-hostile-guest/fuel-bomb.wat`; clamp del cap al
+  minimo 64 (già in spec §2.3) documentato nel test §5b.
+- Docs: README (sezione MCP server + nota via primaria CLI), ROADMAP §2,
+  `index.md` (concept + crate), spec marcata IMPLEMENTATO.
+
 ## 2026-10-11 — piano agent-loop (docs/agent-loop-plan.md, v0.9 da approvare)
 
 - Richiesta utente: valutare come Manus AI, Claude (Code), Codex e i

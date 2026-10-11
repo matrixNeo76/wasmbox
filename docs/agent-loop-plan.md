@@ -1,17 +1,19 @@
 ---
 type: Specification
-title: "wasmbox — AGENT LOOP PLAN: sandbox token-efficient per LLM (v0.9, da approvare)"
-description: "Spec/piano per il loop rapido LLM→wasmbox: come Manus, Claude Code e Codex risparmiano token nelle chat agentiche e come applicarlo qui — un solo tool, envelope compatto, server MCP stdio persistente su wasmbox-core. Nessun codice finché l'utente non conferma."
+title: "wasmbox — AGENT LOOP PLAN: sandbox token-efficient per LLM (v0.9, IMPLEMENTATO)"
+description: "Spec/piano per il loop rapido LLM→wasmbox: come Manus, Claude Code e Codex risparmiano token nelle chat agentiche e come applicarlo qui — un solo tool, envelope compatto, server MCP stdio persistente su wasmbox-core. APPROVATO E IMPLEMENTATO 2026-10-11."
 resource: "docs/agent-loop-plan.md"
 tags: ["spec", "agenti", "llm", "token-efficiency", "mcp", "sandbox", "okf"]
 updated: "2026-10-11"
 ---
 
-# AGENT LOOP PLAN — sandbox token-efficient per LLM (v0.9, da approvare)
+# AGENT LOOP PLAN — sandbox token-efficient per LLM (v0.9, IMPLEMENTATO)
 
-> **Regola di casa (come extension-plan.md)**: spec **proposta** — **nessun
-> codice finché l'utente non conferma**. Sequenza: spec → conferma →
-> implementazione → baseline verde → push → CI/CodeQL.
+> **Stato (2026-10-11): APPROVATO dall'utente e IMPLEMENTATO in
+> `crates/wasmbox-mcp`** — 22/22 test verdi (11 unit + 11 integrazione
+> §3), smoke binario reale OK (initialize/notifica silente/tools/list su
+> pipe reale), baseline `check/test/clippy/fmt` eseguita prima del push.
+> Regola di casa rispettata: spec prima, poi conferma, poi codice.
 > **Invariante 0**: il core (`wasmbox-core`) resta intatto; tutto in un
 > crate nuovo separato, come già fatto per `wasmbox-http`, `wasmbox-ffi`,
 > `wasmbox-wasi`.

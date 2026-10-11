@@ -150,6 +150,30 @@ Exit code: 0 ok · 2 uso/IO · 3 fuel · 4 timeout · 5 memoria guest · 6 ask
 limit/payload · 7 errore handler · 8 export mancante · 9 wasm invalido ·
 10 esecuzione. Contratto completo per agenti: [`skills/wasmbox/SKILL.md`](skills/wasmbox/SKILL.md).
 
+> **Nota agenti**: per i coding agent la via primaria è **CLI + skill**
+> (sopra); il server MCP (sotto) serve gli host agentici senza shell
+> (Claude Desktop, LangGraph, agenti custom). Vedi
+> [`docs/agent-loop-plan.md`](docs/agent-loop-plan.md).
+
+### MCP server (per host agentici senza shell)
+
+```sh
+cargo build -p wasmbox-mcp
+# Server MCP stdio persistente (spec MCP 2026-07-28), un solo tool:
+# `wasmbox_run` (guest base64, envelope JSON capato 4 KiB + head/tail).
+# Per Claude Desktop, Cursor, LangGraph, agent custom: da config MCP,
+# tipo { "command": "./target/debug/wasmbox-mcp" }
+target/debug/wasmbox-mcp
+# → initialize / tools/list / tools/call (vedi docs/agent-loop-plan.md §2.4)
+```
+
+Envelope: `{"ok":true,"output":"…","ask_calls":0,"duration_ms":2,"output_truncated":false}`
+(evento `output_truncated:true` con head+tail oltre il cap) o
+`{"ok":false,"error":"fuel_exhausted","message":"…",…}` — stessi errori
+snake_case della CLI. Limiti SEMPRE attivi: l'agente può solo restr
+ingere (max_fuel, timeout_ms). Contratto completo:
+[`docs/agent-loop-plan.md`](docs/agent-loop-plan.md).
+
 ### UI minimale (Slint, headless)
 
 ```sh

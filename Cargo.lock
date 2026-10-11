@@ -4955,6 +4955,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasmbox-mcp"
+version = "0.1.0"
+dependencies = [
+ "wasmbox-core",
+ "wat",
+]
+
+[[package]]
 name = "wasmbox-ui"
 version = "0.1.0"
 dependencies = [
