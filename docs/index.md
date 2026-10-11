@@ -24,6 +24,7 @@ obbligatorio: `type`). `index.md` e `log.md` sono riservati.
 | [wasi-plan.md](wasi-plan.md) | Specification | Piano v0.8 WASI opt-in — **IMPLEMENTATO 2026-10-11**: crate `wasmbox-wasi` separato dal core, capability deny-by-default, strict import check, stdout captured, deviazioni dichiarate in §10, 7/7 test verdi |
 | [comparative-analysis.md](comparative-analysis.md) | Reference | Analisi comparativa fact-checked (v0.2, 2026-10-11): tassonomia dei 3 livelli di sandboxing (microVM / OS-level / in-process Wasm), matrice vs Firecracker, E2B, gVisor, Sandlock, Extism, RLBox, Eryx, sandboxd; threat model Spectre; caso studio CVE-2026-35195 (realloc Component Model) e come wasmbox lo chiude per design (allocatore cooperativo + bounds check); roadmap di consolidamento v0.2→v1.0 |
 | [scenarios.md](scenarios.md) | Guide | Scenari d'integrazione via `ask`: 6 ricette complete (FastAPI ask-proxy, gRPC bridge, LLM tool-bus, CLI/subprocess, serverless, FFI in-process) con architettura, codice, limiti e checklist per ciascuno |
+| [agent-loop-plan.md](agent-loop-plan.md) | Specification | Piano v0.9 (da approvare): loop rapido LLM→wasmbox token-efficient — fact-check 2026-10-11 (Manus/Claude Code/Codex e protocolli A2A/SSE/ACP/AGNTCY): via primaria skills+CLI+envelope JSON (già nel repo), MCP stdio persistente come canale aggiuntivo per host senza shell (crate separato `wasmbox-mcp`, spec MCP 2026-07-28), core intatto |
 
 ## Fuori da `docs/` ma parte del bundle
 

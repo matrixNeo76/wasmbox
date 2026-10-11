@@ -8,6 +8,61 @@ updated: "2026-10-11"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-11 — piano agent-loop (docs/agent-loop-plan.md, v0.9 da approvare)
+
+- Richiesta utente: valutare come Manus AI, Claude (Code), Codex e i
+  principali framework SOTA usano coding e sandbox per risparmiare token
+  nelle chat agentiche, cercando documenti aggiornati all'11-10-2026, ed
+  elaborare una nuova spec OKF v0.2 per creare questa funzionalità nel
+  repo in modo modulare, così che un LLM possa testare subito wasmbox
+  senza perdere l'unicità del core.
+- **Fact-check web (2026-10-11, due ricerche parallele)** su fonti
+  primarie: Manus (context engineering: prefix stabile, tool masking,
+  filesystem come contesto esterno), Anthropic (effective context
+  engineering; writing tools; **code execution with MCP** — 150k→2k
+  token), Claude Code docs (compaction, subagent, Bash output cap ~30k,
+  CLAUDE.md ≤200 righe), OpenAI Codex (best practices, prompting guide:
+  tool cap ~10k token con troncamento middle, apply_patch, config
+  `/compact` + `model_context_window`), MCP spec 2025-06-18 (stdio,
+  tools, structuredContent), framework sandbox 2026 (E2B, Daytona,
+  Modal, LangChain Deep Agents, Wassette/`MCP↔Wasmtime`, Wasmer SDK
+  ~0.1 ms claim locale).
+- **Schema condiviso estratto**: la sandbox serve per ESEGUIRE e
+  restituire un envelope piccolo e decisivo; mai riversare transcript;
+  cap su output e errori; runtime persistente/warm-reuse; un solo tool
+  per la superficie agente.
+- **Nuova spec `docs/agent-loop-plan.md`** (OKF v0.2, `type:
+  Specification`, stato DA APPROVARE — nessun codice prima della
+  conferma utente): crate nuovo `crates/wasmbox-mcp` (STM-mirror della
+  disciplina di wasmbox-http: JSON a mano, solo std + core), un solo
+  tool `wasmbox_run`, envelope capato (`output` 4 KiB default con
+  head+tail, `message` 256 B, `ask_calls`, `duration_ms`,
+  `output_truncated`, campi in ordine stabile per KV-cache), server MCP
+  stdio persistente (3 metodi: initialize/tools/list/tools/call,
+  protocollo `2025-06-18`), 6 test round-trip + guard anti-bloat
+  envelope, core intatto (Invariante 0).
+- `index.md` aggiornato (riga concept + settore).
+- **Revisione post-note dell'utente (2 obiezioni, entrambe fondate)**:
+  1. *"i framework citati non usano MCP ma skills + CLI + sandbox"* →
+     verificato sui vendor docs: Claude Code, Codex CLI, Cursor,
+     Windsurf hanno tutti shell+sandbox proprie e usano SKILL per
+     guidare la CLI; MCP è documentato come integrazione strutturata
+     AGGIUNTIVA dagli host senza shell. Spec corretta: la via primaria
+     resta **skills + CLI + envelope JSON** (già presente nel repo:
+     SKILL.md + wasmbox-cli --json); MCP stdio è il canale aggiuntivo
+     per host desk-side/no-shell; titolo e gerarchia aggiornati.
+  2. *"hai valutato A2A, SSE e altri protocolli per rafforzare il
+     core?"* → nuova sezione §2.5 con verdict per protocollo: A2A v1.0
+     (agent↔agent, Linux Foundation, 150+ org, binding
+     JSON-RPC/gRPC/HTTP — NON un'API di tool/sandbox), SSE (transport
+     deprecato della vecchia MCP HTTP+SSE; resta come stream opzionale
+     in Streamable HTTP), ACP (assorbito in A2A), AGNTCY/LMOS
+     (infrastruttura federata, LMOS non W3C), MCP Streamable HTTP
+     (unico protocollo candidabile per remoto in v1.0). Fact-check
+     aggiuntivo: la spec MCP corrente è **2026-07-28** (la versione
+     2025-06-18 citata in prima stesura era superata) — correzione
+     applicata anche al protocolVersion dichiarato dal server.
+
 ## 2026-10-11 — limiti MISURATI nel benchmark pubblico (sweep payload + rifiuto enforced)
 
 - Richiesta utente: rimarcare con dati riproducibili (bench) i limiti del
