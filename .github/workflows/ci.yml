@@ -62,6 +62,7 @@ jobs:
       - name: cargo bench (compile freddo/cache, overhead ask)
         run: |
           set -o pipefail
+          mkdir -p bench-report
           cargo bench -p wasmbox-core -- --nocapture 2>&1 | \
             tee bench-report/bench-output.txt
 
