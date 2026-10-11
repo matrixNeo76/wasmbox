@@ -4,7 +4,7 @@ title: "wasmbox — ROADMAP & stato del progetto"
 description: "Documento di continuità: dove siamo, cosa è fatto, cosa è pending, cronologia e trappole note."
 resource: "docs/ROADMAP.md"
 tags: ["roadmap", "status", "continuity", "wasmbox"]
-updated: "2026-10-10"
+updated: "2026-10-11"
 ---
 
 # wasmbox — ROADMAP & STATO DEL PROGETTO
@@ -144,13 +144,33 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
    - **Docs**: `integration.md` aggiornata (4 vie d'uso: CLI, libreria,
      HTTP, FFI + sezione Estensioni FATTE con prove), `index.md`, `log.md`,
      questo punto; baseline completa da rieseguire prima del push.
-   - **Candidati scenari G/H (proposti, NON implementati — decisione
-     utente aperta)**: la nuova guida [`scenarios.md`](scenarios.md)
-     documenta 6 ricette d'integrazione via `ask` (FastAPI ask-proxy,
-     gRPC bridge, LLM tool-bus, CLI, serverless, FFI in-process); la prima
-     da implementare, su richiesta, sarebbe **S1 FastAPI ask-proxy** come
-     scenario G: handler `ProxyHandler` (feature opt-in) in `wasmbox-http`
-     che inoltra le richieste `ask` a un endpoint FastAPI di dominio.
+   - **WASI opt-in IMPLEMENTATO (2026-10-11)**: crate
+     `crates/wasmbox-wasi` — Preview 1 subset capability-gated; specify in
+     [`wasi-plan.md`](wasi-plan.md) (stato: APPROVATO, IMPLEMENTATO,
+     7/7 test verdi). Core intatto; deps `wasmtime-wasi` SOLO nel crate
+     wasi. Fuori scope v0.8: preopen file-read test, benchmark layer-on/off
+     (v0.9), scenario G ancora in attesa.
+   - **Candidati proseguimenti (proposti, NON implementati — decisione
+     utente aperta)**: la guida [`scenarios.md`](scenarios.md) documenta
+     6 ricette d'integrazione via `ask`; la prima da
+     implementare sarebbe **S1 FastAPI ask-proxy** come scenario G.
+   - **Analisi comparativa fact-checked (2026-10-11)**: nuovo documento
+     OKF [`comparative-analysis.md`](comparative-analysis.md)
+     (`type: Reference`) — posizionamento di wasmbox nel panorama sandbox
+     (microVM / OS-level / in-process Wasm), matrice vs Firecracker, E2B,
+     gVisor, Sandlock, Extism, RLBox, Eryx, sandboxd; caso studio
+     CVE-2026-35195 (realloc Component Model, GHSA-394w-hwhg-8vgm) con
+     verifica che l'hardening richiesto (allocatore cooperativo + bounds
+     check) è GIÀ implementato nel core → FASE 1 di consolidamento 2/3
+     chiusa; residuo: spec formale ABI `env::ask` (endianness/layout),
+     benchmark payload-sweep e layer-on/off, out-of-process worker
+     (FASE 2/3). Numeri dei progetti concorrenti marcati
+     "dichiarati" vs "misurato" (solo wasmbox, cargo bench).
+   - **Benchmark pubblici (2026-10-11)**: job CI `benchmark` in
+     `.github/workflows/ci.yml` — su ogni push a `main` esegue
+     `cargo bench -p wasmbox-core` e pubblica l'artifact `bench-report`
+     (con metadati commit/runner). README aggiornato con la sezione
+     "Benchmark pubblici" e caveat macchina-dipendenti.
 1. ~~**Riconnessione GitHub / nuovo progetto**~~ ✅ **RISOLTO** (verificato
    2026-10-08): il progetto corrente è agganciato a `matrixNeo76/wasmbox`
    (git remote corretto) e `git`/`gh` funzionano con la credenzia GitHub App

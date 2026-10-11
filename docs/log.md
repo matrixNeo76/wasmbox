@@ -3,10 +3,100 @@ type: Log
 title: "log — aggiornamenti documentazione wasmbox"
 description: "Storia datata degli aggiornamenti del bundle di documentazione (solo eventi rilevanti per i documenti)."
 okf_version: "0.2"
-updated: "2026-10-10"
+updated: "2026-10-11"
 ---
 
 # Log — modifiche alla documentazione
+
+## 2026-10-11 — nuova analisi comparativa fact-checked (docs/comparative-analysis.md, v0.2)
+
+- Richiesta utente: rielaborare il documento OKF di comparazione con le
+  altre principali sandbox, salvarlo aggiornato nel percorso corretto e
+  poi aggiornare la ROADMAP di conseguenza.
+- **Fact-check web (2026-10-11)** eseguito prima del consolidamento:
+  - CVE-2026-35195 → confermata come
+    [GHSA-394w-hwhg-8vgm](https://github.com/bytecodealliance/wasmtime/security/advisories/GHSA-394w-hwhg-8vgm)
+    (advisory Bytecode Alliance, aprile 2026, CVSS 6.1, Moderate; fixed in
+    24.0.7/36.0.7/42.0.2/43.0.1; RustSec RUSTSEC-2026-0091);
+  - Firecracker (spec VMM: ≤8ms CPU init, ≤125ms boot, ≤5MiB overhead
+    threads), E2B (snapshot restore + lazy memory, ~150ms caso Manus),
+    gVisor (application kernel), Extism (PDK poliglotta), RLBox
+    (fine-grained in-process) → confermati con precisazioni;
+  - Eryx, sandboxd, Sandlock → esistono; numeri marcati "dichiarati dal
+    progetto"; il claim "15–30 MB per interprete Eryx" NON è stato
+    confermato dalle fonti (esse dichiarano solo dimensioni di
+    artefatti ~47/52 MB, non RSS per istanza).
+- **Consolidamento contro il codice reale**: il documento rivendica che
+  l'"hardening" richiesto dalla Criticità 1 (allocatore cooperativo +
+  bounds check su ogni attraversamento host↔guest) è GIÀ IMPLEMENTATO in
+  `wasmbox-core` (verificato su `src/engine.rs`: `guest_alloc`/`guest_free`
+  + `checked_add` + `data.len()` + guard `ptr==0` → `GuestOutOfMemory`),
+  quindi FASE 1 della roadmap di consolidamento ha 2/3 item chiusi; resta
+  aperta la spec formale ABI endianness/layout.
+- Percorso: `docs/comparative-analysis.md` (OKF v0.2, `type: Reference`,
+  frontmatter completo). Sezione "Fonti" con tutti gli URL letti e nota
+  di onestà su misurato-vs-dichiarato.
+- `index.md` aggiornato (riga concept + ordine di lettura 4c).
+
+## 2026-10-11 — WASI opt-in IMPLEMENTATO (crates/wasmbox-wasi, v0.8)
+
+- Richiesta utente: conferma del piano WASI ("confermo puoi procedere").
+- **Nuovo crate `crates/wasmbox-wasi`** (membro workspace): layer WASI
+  Preview 1 opt-in sopra wasmbox-core — il core resta intatto (nessuna
+  dipendenza da wasmtime-wasi lì; divieto blueprint n.1 verificato con
+  grep).
+- API: `WasiCapabilities` (default = zero capability; `preopen_readonly`/
+  `preopen_readwrite`, `allow_clock`, `allow_random` opt-in espliciti),
+  `WasiEngine::new` (strict: il guest che importa syscall non in
+  allow-list NON istanzia — `WasiError::Denied`) e `new_permissive`;
+  `run(input, handler) -> (output, stdout_captured)` con fuel/epoch/
+  memoria/cache `.cwasm` identici al core. Stdout/stderr catturate con
+  `MemoryOutputPipe` (mai scritte sul processo host); stdin sempre vuoto.
+- Deps nuova SOLO nel crate wasi: `wasmtime-wasi 49 (feature p1)` +
+  `thiserror` (col warning della nota dipendenze blueprint resta il
+  core immutato).
+- Test accettazione `tests/wasi_plan_test.rs` — **7/7 PASS**
+  (`cargo test -p wasmbox-wasi`): denied strict (random con default),
+  guest ABI puro senza WASI, random opt-in ok, stdout captured reale
+  (`fd_write` → pipe), clock consentito + fuel bomb → `FuelExhausted`,
+  `ask` round-trip dentro un guest WASI (2 ask registrate), diagnosi
+  delle denied import.
+- Docs: `wasi-plan.md` aggiornato (stato IMPLEMENTATO + §10 deviazioni
+  oneste: strict al build al posto di errno; `fd_write` stdio sempre
+  consentito; benchmark layer-on/off posticipato a v0.9), README (riga
+  estensioni), `index.md`.
+- **Deviazioni 2/3/4 della spec (preopen read test, benchmark) restano
+  out-of-scope v0.8**, dichiarate in wasi-plan.md §9/§10.
+
+## 2026-10-11 — posizionamento LLM, spec WASI opt-in, benchmark in CI
+
+- Richiesta utente (2026-10-11): valutare e procedere su tre proposte: (1)
+  benchmark pubblici via CI, (2) layer WASI opt-in, (3) evidenziare il
+  posizionamento per tool generati da LLM. Ordine eseguito: (3) → (2) → (1).
+- **(3) Posizionamento LLM**: nuova sezione README "Perché è la scelta
+  giusta per tool generati da LLM" — niente WASI di default (il guest non
+  può *aprire* nulla), tool-bus nell'host via `HostHandler::ask`, limiti
+  espresso (fuel/epoch/memoria/budget), errori tipizzati con exit code
+  deterministici, sei vie d'uso provate (CLI/libreria/HTTP/FFI + scenari
+  F e S3 per agenti LLM).
+- **(2) Spec WASI opt-in**: creato `docs/wasi-plan.md` (OKF v0.2, `type:
+  Specification`, v0.8 DA APPROVARE — nessun codice senza conferma):
+  nuovo crate `crates/wasmbox-wasi` SEPARATO dal core (divieto blueprint
+  n.1 intatto: grep `wasmtime-wasi` su `src/` del core = 0), capability
+  model deny-by-default (preopen readonly, stdio captured, clock/random
+  opt-in; MAI sock/poll/environ/argv), subset Preview 1, API draft
+  `WasiEngine` con `run(input, handler)` + stdout captured, 10 test di
+  accettazione (inclusi path traversal e fuel/epoch invariati), rischi
+  dichiarati. `index.md` aggiornato.
+- **(1) Benchmark pubblici**: nuovo job CI `benchmark` in
+  `.github/workflows/ci.yml` — su ogni push a `main` esegue
+  `cargo bench -p wasmbox-core -- --nocapture`, genera
+  `bench-report/README.md` con metadati ambiente (commit, runner, data) e
+  lo pubblica come artifact `bench-report` scaricabile. Il job NON è gate
+  (la baseline resta il job principale). README: sezione "Benchmark
+  pubblici" con tabella dei valori di riferimento, caveat
+  macchina-dipendenti e istruzioni per scaricare l'artifact.
+- Nessuna modifica al codice Rust: baseline invariata.
 
 ## 2026-10-10 — nuova guida scenari d'integrazione (docs/scenarios.md)
 

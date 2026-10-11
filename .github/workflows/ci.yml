@@ -44,3 +44,44 @@ jobs:
 
       - name: cargo fmt
         run: cargo fmt --all --check
+
+  # Benchmark pubblici (2026-10-11): `cargo bench` gira su ogni push a main
+  # e il report resta scaricabile come artifact dalla run d'action — così i
+  # numeri del README (compile freddo/cache-hit, overhead ask) sono sempre
+  # riproducibili e datati dall'ambiente (runner info nel report).
+  # Il job NON è un gate: la baseline resta il job sopra.
+  benchmark:
+    name: Benchmark (cargo bench, artifact pubblico)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: cargo bench (compile freddo/cache, overhead ask)
+        run: |
+          set -o pipefail
+          cargo bench -p wasmbox-core -- --nocapture 2>&1 | \
+            tee bench-report/bench-output.txt
+
+      - name: Report con metadati ambiente
+        run: |
+          {
+            echo "# wasmbox benchmark report"
+            echo
+            echo "- run: ${GITHUB_RUN_ID} ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            echo "- commit: ${GITHUB_SHA}"
+            echo "- runner: ${ImageOS:-unknown} / ${ImageVersion:-unknown}"
+            echo "- comando: cargo bench -p wasmbox-core (harness=false, solo std)"
+            echo
+            echo '```'
+            cat bench-report/bench-output.txt
+            echo '```'
+          } > bench-report/README.md
+
+      - name: Upload report (artifact pubblico)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-report
+          path: bench-report/

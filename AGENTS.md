@@ -53,6 +53,10 @@ cargo build -p guest-echo --target wasm32-unknown-unknown --release
     OpenRouter, rete SOLO nell'host handler; senza
     `OPENROUTER_API_KEY` → exit 7 tipizzato. **Piano completo in
     `docs/extension-plan.md` (TUTTO ESEEGUITO 2026-10-10, vedi ROADMAP §2).**
+  - **WASI opt-in** `crates/wasmbox-wasi` (2026-10-11, VERIFICATO):
+    Preview 1 subset capability-gated `deny-by-default` — spec + stato in
+    `docs/wasi-plan.md` (IMPLEMENTATO, 7/7 test
+    `cargo test -p wasmbox-wasi`).
 - **OKF v0.2**: la `docs/` è in formato Open Knowledge Format v0.2 (frontmatter
   YAML su ogni concept; `index.md` + `log.md` riservati).
 - **graphify / reactgraph**: DECISO di NON introdurli finché il repo resta

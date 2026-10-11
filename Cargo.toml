@@ -12,6 +12,7 @@ members = [
   "examples/scenario-tool-handler",
   "examples/scenario-tool-handler/guest",
   "examples/scenario-limit-runner",
+  "crates/wasmbox-wasi",
 ]
 
 [workspace.package]

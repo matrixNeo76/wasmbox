@@ -26,6 +26,32 @@ pooling allocator e cache `.cwasm` precompilata.
 La logica di dominio vive interamente nell'host: il runtime non interpreta
 né la richiesta né la risposta di `ask` — sono bytes opachi.
 
+## Perché è la scelta giusta per tool generati da LLM
+
+Gli LLM generano codice che può essere sbagliato o ostile **per costruzione**:
+wasmbox lo rende eseguibile in sicurezza esattamente quando un agente dovrebbe
+eseguirlo, cioè senza fiducia dichiarativa ma con veri limiti:
+
+- **Niente di altro nel runtime**: il guest non vede filesystem, rete,
+  processi, né risorse di sistema — non c'è WASI abilitato da default: il
+  guest non può *aprire* nulla, non solo *non è autorizzato*; l'unica porta
+  verso fuori è `env::ask` (bytes opachi, sottoposti a budget);
+- **Il tool-bus resta nell'host**: l'agente (o il backend che lo orchestra)
+  implementa `HostHandler::ask` e mantiene il controllo; il guest non può
+  eseguire chiamate dirette verso nulla;
+- **Limiti dati a priori**: applicati a *ogni* run: fuel (CPU), timeout
+  wall-clock (epoch), memoria e budget di chiamate `ask`; un guest generato
+  da LLM che si blocchi in un loop o provi un burst di chiamate esce con un
+  errore **tipizzato** — mai crash né escape lato processo;
+- **Determinismo dell'errore**: la stessa causa produce sempre lo stesso
+  exit code (CLI 0/3/4/5/6/7/8/9/10) — un agente può valutare l'esito senza
+  interpretare una traccia (`--json`, politiche in `skills/wasmbox/SKILL.md`);
+- **Sei vie d'uso già provate**: come CLI (`--json`), via libreria, via
+  HTTP (`wasmbox-http`), via FFI (Python/Node/Go), e in due modi con
+  agenti LLM: scenario F (`llm:<prompt>` nell'handler) e
+  [scenario S3](docs/scenarios.md) (agente tool-bus: il tuo orchestratore
+  decide il run, il guest chiama i tuoi tool esclusivamente via `ask`).
+
 ## Struttura
 
 ```
@@ -65,6 +91,23 @@ cargo run -p host-run -- target/wasm32-unknown-unknown/release/guest_echo.wasm "
 # benchmark (compile freddo/cache, overhead di ask)
 cargo bench -p wasmbox-core
 ```
+
+### Benchmark pubblici
+
+Il bench (`benches/perf.rs`, `harness = false`, solo std + `wat` in dev-dep)
+misura gli stessi numeri citati in tutto il repo:
+
+| Grandezza | Valore di riferimento (2026-10-09, x86_64 Linux) |
+|---|---|
+| Compile a freddo (`SandboxEngine::new`) | ~1.36 ms |
+| Compile con cache hit (`.cwasm`) | ~0.14 ms |
+| Run con round-trip `ask` | ~0.2 µs/run; overhead `ask` ~0.7 µs/run |
+
+Caveat di onestà: i numeri sono **macchina-dipendenti**; vanno citati con
+versione/target e sistema. La CI **li produce a ogni push su `main`**
+(job `benchmark` in `.github/workflows/ci.yml`): scarica l'artifact
+`bench-report` dall'ultima run d'actions per i numeri aggiornati — sempre
+riproducibili e datati, rispetto a un benchmark scritto one-off.
 
 ### CLI (per umani e agenti AI)
 
@@ -124,6 +167,10 @@ La documentazione in `docs/` segue il formato **[OKF v0.2](https://github.com/Go
   prossimi passi, cronologia con prove, trappole note
 - **[docs/github-advanced-security.md](docs/github-advanced-security.md)**
   — integrazione CodeQL / secret scanning / Dependabot
+- **[docs/comparative-analysis.md](docs/comparative-analysis.md)** —
+  analisi comparativa fact-checked con le altre sandbox (Firecracker,
+  E2B, gVisor, Sandlock, Extism, RLBox, Eryx, sandboxd), threat model e
+  caso studio CVE-2026-35195
 
 ## Cosa wasmbox NON è (audit 2026-10-09, aggiornato)
 
@@ -154,6 +201,13 @@ già presenti nel workspace (introdotte il 2026-10-09):
   `examples/scenario-tool-handler`, `ureq`): `llm:<prompt>` via OpenRouter —
   la rete sta SOLO nell'host handler; senza `OPENROUTER_API_KEY` → exit 7
   tipizzato. Prova offline: `sh scripts/scenarios/scenario-f.sh`.
+- **WASI opt-in** (`crates/wasmbox-wasi`, 2026-10-11): layer **separato**
+  dal core con capability **deny-by-default** — `WasiCapabilities::default()`
+  = zero preopen, zero clock/random; un guest che importa syscall non
+  concesse NON istanzia. Con preopens readonly e stdout captured il guest
+  può leggere file concessi e stampare (catturato in `run`). Fuel/epoch/
+  memoria/`ask` invariati. Spec: [`docs/wasi-plan.md`](docs/wasi-plan.md),
+  test `cargo test -p wasmbox-wasi` (7/7 verdi).
 
 La regola resta: il blueprint vieta logica di dominio e I/O nel crate `core` —
 tutto sta in crate separati sopra `wasmbox-core` (CLI, UI, http e FFI
