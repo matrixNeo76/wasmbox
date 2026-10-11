@@ -166,11 +166,17 @@ Validazione (2026-10-09, su wasmtime 49.0, tutti exit 0):
      benchmark payload-sweep e layer-on/off, out-of-process worker
      (FASE 2/3). Numeri dei progetti concorrenti marcati
      "dichiarati" vs "misurato" (solo wasmbox, cargo bench).
-   - **Benchmark pubblici (2026-10-11)**: job CI `benchmark` in
+   - **Benchmark pubblici (2026-10-11, ESTESI)**: job CI `benchmark` in
      `.github/workflows/ci.yml` — su ogni push a `main` esegue
-     `cargo bench -p wasmbox-core` e pubblica l'artifact `bench-report`
-     (con metadati commit/runner). README aggiornato con la sezione
-     "Benchmark pubblici" e caveat macchina-dipendenti.
+     `cargo bench -p wasmbox-core -- --nocapture` e pubblica l'artifact
+     `bench-report` (con metadati commit/runner). Il bench ora copre
+     **anche lo sweep a granularità di payload** (64B/4KB/64KB/1MB →
+     ~10/12/48/580 µs, n=500) e la **misura del limite ENFORCED**
+     (payload 1 MiB+1 → `PayloadTooLarge` tipizzato in ~535 ns, mai
+     crash) via modulo dedicato `ASK_BIG_WAT` (16 MiB lineari, bump
+     resetato a ogni run). README: sezione ampliata "i limiti MISURATI,
+     non dichiarati" con la differenziazione competitiva esplicita
+     (numeri riproducibili vs dichiarati dai competitor).
 1. ~~**Riconnessione GitHub / nuovo progetto**~~ ✅ **RISOLTO** (verificato
    2026-10-08): il progetto corrente è agganciato a `matrixNeo76/wasmbox`
    (git remote corretto) e `git`/`gh` funzionano con la credenzia GitHub App

@@ -8,6 +8,34 @@ updated: "2026-10-11"
 
 # Log — modifiche alla documentazione
 
+## 2026-10-11 — limiti MISURATI nel benchmark pubblico (sweep payload + rifiuto enforced)
+
+- Richiesta utente: rimarcare con dati riproducibili (bench) i limiti del
+  progetto dove i competitor non possono farlo, e evidenziarlo in README
+  e documenti.
+- **`benches/perf.rs` esteso** (solo std, nessuna nuova dipendenza):
+  - sweep round-trip `ask` a payload 64B/4KB/64KB/1MB (n=500): ~10 /
+    ~12 / ~48 / ~580 µs; costo marginale ~0.55 ns/byte;
+  - **limite ENFORCED misurato**: payload 1 MiB+1 > tetto 1 MiB → rifiuto
+    con `SandboxError::PayloadTooLarge` tipizzato in ~535 ns, verificato
+    realmente nel bench (panico se diverso), PRIMA di toccare il guest.
+  - nuovo modulo `ASK_BIG_WAT` (16 MiB lineari, heap da `memory.size`,
+    bump resetato a ogni `guest_run`): serve perché il modulo piccolo
+    del bench principale ha un bump allocator con tetto 64KB che
+    saturerebbe a payload grandi (bug del primo tentativo, fixato).
+- **README**: sezione "Benchmark pubblici — i limiti MISURATI, non
+  dichiarati" con la differenziazione esplicita: i competitor
+  (Eryx, sandboxd, Sandlock) pubblicano cifre dichiarate non
+  riproducibili; i nostri escono da `cargo bench` (una riga) e dalla CI
+  (artifact a ogni push). Tabella aggiornata al 2026-10-11.
+- `comparative-analysis.md` FASE 2: sweep 64B/4KB/64KB/1MB e limite
+  ENFORCED segnati [x]; resta il confronto diretto Extism/Wasmtime
+  grezzo e il layer-on/off WASI (v0.9). ROADMAP aggiornata.
+- Importante per l'onestà del claim: la macchina host è una VM shared,
+  i numeri assoluti fluttuano (overhead `ask` misurato tra ~0.6 e ~1.8
+  µs in run consecutive); la citazione corretta è con n e data, come
+  fa la tabella (e per questo l'artifact CI è datato per commit).
+
 ## 2026-10-11 — nuova analisi comparativa fact-checked (docs/comparative-analysis.md, v0.2)
 
 - Richiesta utente: rielaborare il documento OKF di comparazione con le

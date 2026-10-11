@@ -251,9 +251,13 @@ quello del ticker epoch, zero dipendenze async); l'handler
 | [x] Benchmark di avvio a freddo con moduli precompilati AOT (.cwasm)                   |
 |     → `benches/perf.rs`: freddo ~1.36 ms, cache-hit ~0.14 ms; job CI `benchmark`       |
 |       pubblica l'artifact a ogni push su main (2026-10-11).                            |
-| [ ] Benchmark round-trip `ask` a granularità crescente (64B, 4KB, 64KB, 1MB)           |
-|     → parzialmente fatto (round-trip ~0.2 µs + overhead ~0.7 µs con payload "bench");  |
-|       il sweep a granularità di payload è il residuo.                                   |
+| [x] Benchmark round-trip `ask` a granularità crescente (64B, 4KB, 64KB, 1MB)           |
+|     → `benches/perf.rs` 2026-10-11 (n=500): 64B ~10 µs, 4KB ~12 µs,                   |
+|       64KB ~48 µs, 1MB ~580 µs; costo marginale ~0.55 ns/byte.                        |
+| [x] Limite ENFORCED misurato: payload 1 MiB+1 → rifiuto tipizzato                     |
+|     `PayloadTooLarge` in ~535 ns, MAI crash, PRIMA di toccare il guest                 |
+|     (CLI `--json`: exit 6 deterministico). Unico runtime dei confronti                 |
+|     con il limite di risorsa misurato in un benchmark pubblico.                        |
 | [ ] Confronto diretto di latenza vs Wasmtime grezzo ed Extism                          |
 |     → da fare; lo scenario-G attiva il confronto Extism (proposto per v0.9).           |
 | [ ] Benchmark layer WASI layer-on/off (test 9 di wasi-plan §6, già differito a v0.9)   |

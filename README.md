@@ -92,16 +92,36 @@ cargo run -p host-run -- target/wasm32-unknown-unknown/release/guest_echo.wasm "
 cargo bench -p wasmbox-core
 ```
 
-### Benchmark pubblici
+### Benchmark pubblici — i limiti MISURATI, non dichiarati
 
-Il bench (`benches/perf.rs`, `harness = false`, solo std + `wat` in dev-dep)
-misura gli stessi numeri citati in tutto il repo:
+**Differenza competitiva**: i competitor (Eryx, sandboxd, Sandlock)
+pubblicano cifre "dichiarate dal progetto", non riproducibili da terzi.
+I nostri numeri sono **riproducibili da chiunque** con un solo comando:
 
-| Grandezza | Valore di riferimento (2026-10-09, x86_64 Linux) |
+```sh
+cargo bench -p wasmbox-core -- --nocapture
+```
+
+Il bench (`benches/perf.rs`, `harness = false`, solo std + `wat` in
+dev-dep) misura gli stessi numeri citati in tutto il repo:
+
+| Grandezza | Valore di riferimento (2026-10-11, x86_64 Linux) |
 |---|---|
-| Compile a freddo (`SandboxEngine::new`) | ~1.36 ms |
-| Compile con cache hit (`.cwasm`) | ~0.14 ms |
-| Run con round-trip `ask` | ~0.2 µs/run; overhead `ask` ~0.7 µs/run |
+| Compile a freddo (`SandboxEngine::new`) | ~1.7–2.4 ms |
+| Compile con cache hit (`.cwasm`) | ~0.13–0.26 ms |
+| Run con round-trip `ask` | ~0.7 µs overhead sopra run senza `ask` |
+| Round-trip `ask` payload 64B | ~10 µs/run (n=500) |
+| Round-trip `ask` payload 4KB | ~12 µs/run (n=500) |
+| Round-trip `ask` payload 64KB | ~48 µs/run (n=500) |
+| Round-trip `ask` payload 1MB | ~580 µs/run (n=500) |
+| Costo marginale oltre 64B | ~0.55 ns/byte (copia RAM→RAM) |
+| **Rifiuto tipizzato** (payload 1 MiB+1 > tetto 1 MiB) | **~535 ns, errore `PayloadTooLarge` ENFORCED, mai crash** |
+
+L'ultima riga è la prova che i limiti **funzionano e sono economici da
+far rispettare**: la sandbox rifiuta un payload oltre il tetto con un
+errore tipizzato in mezzo microsecondo, PRIMA di toccare il guest — non
+un crash, non un escape, sempre lo stesso errore (`--json` in CLI:
+exit 6 deterministico).
 
 Caveat di onestà: i numeri sono **macchina-dipendenti**; vanno citati con
 versione/target e sistema. La CI **li produce a ogni push su `main`**
