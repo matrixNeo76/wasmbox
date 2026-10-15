@@ -161,7 +161,7 @@ jobs:
           "$hash  $dir.zip" | Out-File -Encoding ascii "$dir.zip.sha256"
 
       - name: Crea release GitHub
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             wasmbox-*x86_64-unknown-linux-gnu.tar.gz
